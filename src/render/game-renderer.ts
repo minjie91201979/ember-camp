@@ -57,6 +57,7 @@ import {
   createSkyGroup,
   scatterGroundDressing,
 } from './scenery';
+import { createChallengePortal } from './challenge-portal';
 import { createTeleport, type TeleportView } from './teleport';
 import { cloneRepeat, loadP0Textures, type P0Textures } from './textures';
 
@@ -1101,6 +1102,9 @@ export class GameRenderer {
     root.add(createPalisade(tex));
     this.teleport = createTeleport(tex);
     root.add(this.teleport.group);
+    const challengeGate = createChallengePortal(tex);
+    root.add(challengeGate.group);
+    this.campProps.push(challengeGate);
     this.campfire = createCampfire(tex);
     root.add(this.campfire.group);
     for (const point of [{ x: 2.35 }, { x: 35.4 }]) {

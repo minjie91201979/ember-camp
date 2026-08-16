@@ -79,7 +79,7 @@ import { activeBoss, bossCastLabel } from './systems/boss';
 import { eliteAffixHints, eliteAffixTags } from './systems/elite-affixes';
 import { canStartNgPlus, startNgPlus } from './systems/ng-plus';
 import { startChallenge, stepChallenge, sanitizeChallengeOnLoad } from './systems/challenge';
-import { stepBossEncounter } from './systems/boss-encounter';
+import { stepBossEncounter, engagedBossForHud } from './systems/boss-encounter';
 import {
   formatItemSummary,
   gearCompareLines,
@@ -566,7 +566,7 @@ export class Game {
     const skillKey = Object.entries(w.skills)
       .map(([k, v]) => `${k}:${v}`)
       .join(',');
-    const boss = activeBoss(w);
+    const boss = engagedBossForHud(w);
     let nearbyElite: (typeof w.dummies)[number] | null = null;
     let nearbyEliteDist = Number.POSITIVE_INFINITY;
     for (const d of w.dummies) {

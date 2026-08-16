@@ -1,4 +1,4 @@
-import type { World } from '../types';
+import type { Dummy, World } from '../types';
 import { activeBoss } from './boss';
 import { sfx } from '../../audio/sfx';
 
@@ -80,4 +80,24 @@ export function stepBossEncounter(world: World): void {
       sealBossGate(world, boss.x);
     }
   }
+}
+
+/** HUD 血条用：未进战不显示（避免进区就看见满血条）。 */
+export function engagedBossForHud(world: World): Dummy | null {
+  const boss = activeBoss(world);
+  if (!boss) {
+    return null;
+  }
+  if (boss.hp < boss.maxHp) {
+    return boss;
+  }
+  if (world.bossGateClosed) {
+    return boss;
+  }
+  const dist = Math.abs(world.player.x - boss.x);
+  const dy = Math.abs(world.player.y - boss.y);
+  if (dist < ENGAGE_RANGE && dy < 3.2) {
+    return boss;
+  }
+  return null;
 }

@@ -1574,8 +1574,8 @@ export function Hud({
       ) : null}
 
       {vitals.campOpen === 'teleport' ? (
-        <div className="panel panel--camp panel--worldmap">
-          <header className="inv__head">
+        <div className="panel panel--camp panel--worldmap" role="dialog" aria-label="世界地图">
+          <header className="inv__head worldmap__head">
             <h2>世界地图</h2>
             <p>
               烬土大陆 · 传送阵
@@ -1677,33 +1677,35 @@ export function Hud({
               <span className="worldmap__legend-item worldmap__legend-item--lock">未探索</span>
             </p>
           </div>
-          <p className="inv__hint">区内落点</p>
-          <div className="panel__actions">
-            {(vitals.travelNodes ?? []).map((node, i) => (
-              <button
-                key={node.id}
-                type="button"
-                className={i === vitals.travelNodes.length - 1 ? 'panel__primary' : undefined}
-                onClick={() => onTeleport(node.id)}
-              >
-                {node.label}
-              </button>
-            ))}
-            {vitals.canStartNgPlus ? (
-              <button type="button" className="panel__primary panel__primary--ng" onClick={onStartNgPlus}>
-                开启新周目 NG+{(vitals.ngPlusLevel ?? 0) + 1}
-              </button>
-            ) : null}
-          </div>
-          <p className="inv__hint">
-            {vitals.canStartNgPlus
-              ? '击败终焉君王后可用：保留装备成长，怪物更强、掉落淬炼更好；开启后烬灰披风点亮并自动存档'
-              : vitals.ngPlusLevel > 0
-                ? '烬灰披风已点亮 · 掉落装备可带周目淬炼'
-                : '点击地图钉点传送至区域入口；击败 BOSS 后区内落点含「门前」'}
-            <br />
-            <kbd>F</kbd> / <kbd>Esc</kbd> 关闭
-          </p>
+          <footer className="worldmap__dock">
+            <p className="inv__hint worldmap__dock-label">区内落点</p>
+            <div className="panel__actions">
+              {(vitals.travelNodes ?? []).map((node, i) => (
+                <button
+                  key={node.id}
+                  type="button"
+                  className={i === vitals.travelNodes.length - 1 ? 'panel__primary' : undefined}
+                  onClick={() => onTeleport(node.id)}
+                >
+                  {node.label}
+                </button>
+              ))}
+              {vitals.canStartNgPlus ? (
+                <button type="button" className="panel__primary panel__primary--ng" onClick={onStartNgPlus}>
+                  开启新周目 NG+{(vitals.ngPlusLevel ?? 0) + 1}
+                </button>
+              ) : null}
+            </div>
+            <p className="inv__hint">
+              {vitals.canStartNgPlus
+                ? '击败终焉君王后可用：保留装备成长，怪物更强、掉落淬炼更好；开启后烬灰披风点亮并自动存档'
+                : vitals.ngPlusLevel > 0
+                  ? '烬灰披风已点亮 · 掉落装备可带周目淬炼'
+                  : '点击地图钉点传送至区域入口；击败 BOSS 后区内落点含「门前」'}
+              <br />
+              <kbd>F</kbd> / <kbd>Esc</kbd> 关闭
+            </p>
+          </footer>
         </div>
       ) : null}
     </div>
