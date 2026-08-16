@@ -36,7 +36,7 @@ const TABLE: Partial<Record<AttackKind, SkillCastFx>> = {
   fireball: { mode: 'arc', color: PALETTE.ember, grow: 1.55, tall: 1.4, lightBoost: 1.35 },
   pyroblast: { mode: 'arc', color: PALETTE.ember, grow: 1.7, tall: 1.5, lightBoost: 1.4 },
   'frost-nova': { mode: 'ring', color: PALETTE.mage, grow: 1.05, tall: 1, lightBoost: 1.25 },
-  blizzard: { mode: 'ring', color: PALETTE.moonlight, grow: 1.35, tall: 1, lightBoost: 1.22 },
+  blizzard: { mode: 'ring', color: PALETTE.moonlight, grow: 1.85, tall: 1.15, lightBoost: 1.35 },
   'ice-lance': { mode: 'arc', color: PALETTE.moonlight, grow: 1.25, tall: 1.2, lightBoost: 1.2 },
   'arcane-missiles': { mode: 'arc', color: PALETTE.mage, grow: 1.2, tall: 1.1, lightBoost: 1.18 },
   blink: { mode: 'burst', color: PALETTE.mage, grow: 1.3, tall: 1, lightBoost: 1.28 },

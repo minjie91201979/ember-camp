@@ -504,28 +504,42 @@ export function buildForestBelt(bark: THREE.Texture, leaf: THREE.Texture): THREE
   return group;
 }
 
+export type GroundDressingTheme = {
+  leafTint: number;
+  barkTint: number;
+  showTrees: boolean;
+};
+
 export function scatterGroundDressing(
   platforms: Rect[],
   tex: P0Textures,
+  theme?: GroundDressingTheme,
 ): THREE.Group {
+  const leafTint = theme?.leafTint ?? 0x8fa888;
+  const barkTint = theme?.barkTint ?? 0xc4a07a;
+  const showTrees = theme?.showTrees ?? true;
   const group = new THREE.Group();
   let seed = 80;
   for (const plat of platforms) {
     if (plat.y > 0 || plat.h < 0.8) {
       continue;
     }
-    const treeCount = Math.max(1, Math.floor(plat.w / 5.5));
-    for (let i = 0; i < treeCount; i += 1) {
-      seed += 1;
-      const tree = createBigTree(0.85 + hash(seed) * 0.45, tex.bark, tex.leaf);
-      const x = plat.x + 1.2 + (i + 0.3) * (plat.w / (treeCount + 0.4));
-      tree.position.set(x, 1, -0.85 - hash(seed + 1) * 0.15);
-      group.add(tree);
+    if (showTrees) {
+      const treeCount = Math.max(1, Math.floor(plat.w / 5.5));
+      for (let i = 0; i < treeCount; i += 1) {
+        seed += 1;
+        const tree = createBigTree(0.85 + hash(seed) * 0.45, tex.bark, tex.leaf);
+        tintTreeGroup(tree, leafTint, barkTint);
+        const x = plat.x + 1.2 + (i + 0.3) * (plat.w / (treeCount + 0.4));
+        tree.position.set(x, 1, -0.85 - hash(seed + 1) * 0.15);
+        group.add(tree);
+      }
     }
     const grassCount = Math.max(3, Math.floor(plat.w / 1.6));
     for (let i = 0; i < grassCount; i += 1) {
       seed += 1;
       const clump = createGrassClump(seed, tex.grass);
+      tintMeshMaterials(clump, leafTint);
       clump.position.set(plat.x + 0.6 + i * (plat.w / grassCount), 1, (hash(seed) - 0.5) * 1.1);
       group.add(clump);
     }
@@ -541,11 +555,45 @@ export function scatterGroundDressing(
       group.add(stone);
     }
   }
-  const fgTrees = [-1.4, 15.2, 24.6, 37.5];
-  for (const [i, x] of fgTrees.entries()) {
-    const tree = createBigTree(1.15 + hash(i + 200) * 0.25, tex.bark, tex.leaf);
-    tree.position.set(x, 1, 1.15);
-    group.add(tree);
+  if (showTrees) {
+    const fgTrees = [-1.4, 15.2, 24.6, 37.5];
+    for (const [i, x] of fgTrees.entries()) {
+      const tree = createBigTree(1.15 + hash(i + 200) * 0.25, tex.bark, tex.leaf);
+      tintTreeGroup(tree, leafTint, barkTint);
+      tree.position.set(x, 1, 1.15);
+      group.add(tree);
+    }
   }
   return group;
+}
+
+function tintMeshMaterials(root: THREE.Object3D, hex: number): void {
+  root.traverse((obj) => {
+    if (!(obj instanceof THREE.Mesh)) {
+      return;
+    }
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    for (const mat of mats) {
+      if (mat instanceof THREE.MeshStandardMaterial) {
+        mat.color.setHex(hex);
+      }
+    }
+  });
+}
+
+function tintTreeGroup(root: THREE.Object3D, leafHex: number, barkHex: number): void {
+  root.traverse((obj) => {
+    if (!(obj instanceof THREE.Mesh)) {
+      return;
+    }
+    const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+    const isLeaf =
+      obj.geometry instanceof THREE.SphereGeometry ||
+      obj.geometry instanceof THREE.ConeGeometry;
+    for (const mat of mats) {
+      if (mat instanceof THREE.MeshStandardMaterial) {
+        mat.color.setHex(isLeaf ? leafHex : barkHex);
+      }
+    }
+  });
 }

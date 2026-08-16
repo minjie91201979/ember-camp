@@ -258,9 +258,13 @@ export function syncPlayerTotals(player: Player): void {
 export function applyDerivedToPlayer(player: Player): void {
   syncPlayerTotals(player);
   const stats = deriveStats(player);
+  const wasDead = player.hp <= 0;
   const ratio = player.maxHp > 0 ? player.hp / player.maxHp : 1;
   player.maxHp = stats.maxHp;
-  player.hp = Math.min(stats.maxHp, Math.max(1, Math.round(stats.maxHp * ratio)));
+  // 已死亡保持 0；存活时取比例并至少 1，避免同步属性时四舍五入归零
+  player.hp = wasDead
+    ? 0
+    : Math.min(stats.maxHp, Math.max(1, Math.round(stats.maxHp * ratio)));
   player.atk = stats.atk;
   player.sp = stats.sp;
   player.def = stats.def;

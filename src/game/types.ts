@@ -31,6 +31,10 @@ export type Dummy = {
   flash: number;
   deadT: number;
   stunT: number;
+  /** 寒冰减速剩余（暴风雪等；可移动但变慢，非冻结） */
+  chillT: number;
+  /** 当前寒冰移速倍率（1=无；由施加来源写入） */
+  chillMove: number;
   kind: DummyKind;
   enemyId: string;
   name: string;
@@ -708,7 +712,11 @@ export type BlizzardZone = {
   life: number;
   tickAcc: number;
   dps: number;
-  slow: number;
+  /** 寒冰移速倍率 */
+  chillMove: number;
+  chillRefresh: number;
+  /** 已结算 tick 数（首跳立即） */
+  ticks: number;
 };
 
 export type World = {
@@ -786,7 +794,7 @@ export type World = {
   /** 已发现传说装备 id */
   discoveredLegendaries: string[];
   /** 林地一次性教学步骤 */
-  tutorialStep: 'move' | 'attack' | 'roll' | 'potion' | 'loot' | 'minimap' | 'secret' | 'done';
+  tutorialStep: 'move' | 'jump' | 'attack' | 'roll' | 'potion' | 'loot' | 'minimap' | 'secret' | 'done';
   tutorialDone: boolean;
   tutorialAttrHint: boolean;
   tutorialSkillHint: boolean;

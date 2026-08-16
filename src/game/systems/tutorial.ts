@@ -1,10 +1,11 @@
 import type { World } from '../types';
 
-const STEPS = ['move', 'attack', 'roll', 'potion', 'loot', 'minimap', 'secret'] as const;
+const STEPS = ['move', 'jump', 'attack', 'roll', 'potion', 'loot', 'minimap', 'secret'] as const;
 export type TutorialStep = (typeof STEPS)[number] | 'done';
 
 const HINTS: Record<(typeof STEPS)[number], string> = {
   move: '教学 · A / D 左右移动',
+  jump: '教学 · Space / W 跳跃',
   attack: '教学 · J 或鼠标左键攻击',
   roll: '教学 · Shift 翻滚（无敌帧）',
   potion: '教学 · R 红药回复生命',

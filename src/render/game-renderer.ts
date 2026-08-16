@@ -132,6 +132,12 @@ export class GameRenderer {
   private moonLayer: ScrollLayer | null = null;
   private sunLayer: ScrollLayer | null = null;
   private mistLayer: ScrollLayer | null = null;
+  private parallaxFarPeaks: THREE.Object3D | null = null;
+  private parallaxMountains: THREE.Object3D | null = null;
+  private parallaxMid: THREE.Object3D | null = null;
+  private parallaxNear: THREE.Object3D | null = null;
+  private parallaxForest: THREE.Object3D | null = null;
+  private parallaxMist: THREE.Object3D | null = null;
   private skyCloudLayer: ScrollLayer | null = null;
   private teleport: TeleportView | null = null;
   private campfire: CampfireView | null = null;
@@ -160,7 +166,12 @@ export class GameRenderer {
   >();
   private readonly blizzardViews = new Map<
     number,
-    THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>
+    {
+      root: THREE.Group;
+      ground: THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>;
+      ring: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>;
+      shards: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>[];
+    }
   >();
   private fogColor = new THREE.Color(PALETTE.dayFog);
   private sceneTheme = sceneThemeOf('woodland');
@@ -260,6 +271,7 @@ export class GameRenderer {
     const tex = this.requireTex();
     this.clearZone();
     this.sceneTheme = sceneThemeOf(world.kitTheme);
+    this.applyParallaxTheme(this.sceneTheme);
     const root = new THREE.Group();
     root.name = 'zone';
     this.zoneGroup = root;
@@ -289,7 +301,13 @@ export class GameRenderer {
     if (zone) {
       root.add(placeKitDecor(zone.kit, (zone.theme as KitThemeId) ?? 'woodland', tex));
     }
-    root.add(scatterGroundDressing(world.platforms, tex));
+    root.add(
+      scatterGroundDressing(world.platforms, tex, {
+        leafTint: this.sceneTheme.leafTint,
+        barkTint: this.sceneTheme.midTint,
+        showTrees: this.sceneTheme.showForest,
+      }),
+    );
   }
 
   private clearZone(): void {
@@ -796,32 +814,107 @@ export class GameRenderer {
     farPeaks.position.z = -40;
     farPeaks.scale.setScalar(0.52);
     this.scene.add(farPeaks);
+    this.parallaxFarPeaks = farPeaks;
     this.addScroll(farPeaks, 0.98, 0.02, 1.4, 0.2);
 
     const mountains = buildMountainRange(tex.rock);
     mountains.position.z = -15.2;
     this.scene.add(mountains);
+    this.parallaxMountains = mountains;
     this.addScroll(mountains, 0.88, 0.04, 2, 0.7);
 
     const mist = buildMountainMist();
     mist.position.z = -13.4;
     this.scene.add(mist);
+    this.parallaxMist = mist;
     this.mistLayer = this.addScroll(mist, 0.8, 0.05, 1.2, 0.55);
 
     const hills = buildHillRange(tex.rock);
     hills.position.z = -11.6;
     this.scene.add(hills);
+    this.parallaxMid = hills;
     this.addScroll(hills, 0.73, 0.04, 0.4, 0.2);
 
     const horizon = buildHorizonRidge(tex.ground, tex.rock);
     horizon.position.z = -8;
     this.scene.add(horizon);
+    this.parallaxNear = horizon;
     this.addScroll(horizon, 0.7, 0.04, 0, 0);
 
     const forest = buildForestBelt(tex.bark, tex.leaf);
     forest.position.z = -6;
     this.scene.add(forest);
+    this.parallaxForest = forest;
     this.addScroll(forest, 0.46, 0.04, 3, 1);
+
+    this.applyParallaxTheme(this.sceneTheme);
+  }
+
+  /** 按场景主题给视差层换色；非林区隐藏松柏林带。 */
+  private applyParallaxTheme(theme: ReturnType<typeof sceneThemeOf>): void {
+    this.tintParallaxGroup(this.parallaxFarPeaks, theme.farTint);
+    this.tintParallaxGroup(this.parallaxMountains, theme.farTint);
+    this.tintParallaxGroup(this.parallaxMid, theme.midTint);
+    this.tintParallaxGroup(this.parallaxNear, theme.midTint);
+    this.tintForestBelt(this.parallaxForest, theme.leafTint, theme.midTint);
+    if (this.parallaxForest) {
+      this.parallaxForest.visible = theme.showForest;
+    }
+    if (this.parallaxMist) {
+      const mistColor = new THREE.Color(theme.fogDay).convertSRGBToLinear();
+      this.parallaxMist.traverse((obj) => {
+        if (!(obj instanceof THREE.Mesh)) {
+          return;
+        }
+        const mat = obj.material;
+        if (mat instanceof THREE.ShaderMaterial && mat.uniforms.uColor) {
+          (mat.uniforms.uColor.value as THREE.Color).copy(mistColor);
+        }
+      });
+    }
+  }
+
+  private tintParallaxGroup(root: THREE.Object3D | null, hex: number): void {
+    if (!root) {
+      return;
+    }
+    root.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) {
+        return;
+      }
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      for (const mat of mats) {
+        if (
+          mat instanceof THREE.MeshStandardMaterial ||
+          mat instanceof THREE.MeshLambertMaterial ||
+          mat instanceof THREE.MeshBasicMaterial
+        ) {
+          mat.color.setHex(hex);
+        }
+      }
+    });
+  }
+
+  private tintForestBelt(
+    root: THREE.Object3D | null,
+    leafHex: number,
+    barkHex: number,
+  ): void {
+    if (!root) {
+      return;
+    }
+    root.traverse((obj) => {
+      if (!(obj instanceof THREE.Mesh)) {
+        return;
+      }
+      const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
+      const isLeaf = obj.geometry instanceof THREE.ConeGeometry;
+      for (const mat of mats) {
+        if (mat instanceof THREE.MeshStandardMaterial) {
+          mat.color.setHex(isLeaf ? leafHex : barkHex);
+        }
+      }
+    });
   }
 
   private zoneRoot(): THREE.Object3D {
@@ -1492,35 +1585,91 @@ export class GameRenderer {
     const seen = new Set<number>();
     for (const zone of world.blizzards ?? []) {
       seen.add(zone.id);
-      let mesh = this.blizzardViews.get(zone.id);
-      if (!mesh) {
-        mesh = new THREE.Mesh(
-          new THREE.CircleGeometry(1, 28),
+      let view = this.blizzardViews.get(zone.id);
+      if (!view) {
+        const root = new THREE.Group();
+        const ground = new THREE.Mesh(
+          new THREE.CircleGeometry(1, 36),
+          new THREE.MeshBasicMaterial({
+            color: PALETTE.moonlight,
+            transparent: true,
+            depthTest: false,
+            fog: false,
+            opacity: 0.28,
+            side: THREE.DoubleSide,
+          }),
+        );
+        ground.rotation.x = -Math.PI / 2;
+        const ring = new THREE.Mesh(
+          new THREE.RingGeometry(0.82, 1.02, 40),
           new THREE.MeshBasicMaterial({
             color: PALETTE.mage,
             transparent: true,
             depthTest: false,
             fog: false,
-            opacity: 0.35,
+            opacity: 0.55,
             side: THREE.DoubleSide,
           }),
         );
-        mesh.rotation.x = -Math.PI / 2;
-        this.scene.add(mesh);
-        this.blizzardViews.set(zone.id, mesh);
+        ring.rotation.x = -Math.PI / 2;
+        ring.position.y = 0.02;
+        const shards: THREE.Mesh<THREE.BoxGeometry, THREE.MeshBasicMaterial>[] = [];
+        for (let i = 0; i < 14; i += 1) {
+          const shard = new THREE.Mesh(
+            new THREE.BoxGeometry(0.08, 0.42, 0.08),
+            new THREE.MeshBasicMaterial({
+              color: i % 2 === 0 ? PALETTE.moonlight : PALETTE.mage,
+              transparent: true,
+              depthTest: false,
+              fog: false,
+              opacity: 0.75,
+            }),
+          );
+          shard.userData.phase = i * 0.37;
+          shard.userData.orbit = (i / 14) * Math.PI * 2;
+          shards.push(shard);
+          root.add(shard);
+        }
+        root.add(ground);
+        root.add(ring);
+        this.scene.add(root);
+        view = { root, ground, ring, shards };
+        this.blizzardViews.set(zone.id, view);
       }
-      mesh.position.set(zone.x, zone.y + 0.06, 0.35);
-      const pulse = 0.92 + Math.sin(this.clock * 8 + zone.id) * 0.08;
-      mesh.scale.setScalar(zone.radius * pulse);
-      mesh.material.opacity = 0.22 + Math.min(1, zone.life / 3) * 0.28;
+      view.root.position.set(zone.x, zone.y + 0.04, 0.32);
+      const pulse = 0.94 + Math.sin(this.clock * 7 + zone.id) * 0.06;
+      view.ground.scale.setScalar(zone.radius * pulse);
+      view.ring.scale.setScalar(zone.radius * pulse);
+      view.ground.material.opacity = 0.18 + Math.min(1, zone.life / 2.5) * 0.22;
+      view.ring.material.opacity = 0.35 + Math.sin(this.clock * 10) * 0.12;
+      for (const shard of view.shards) {
+        const phase = (shard.userData.phase as number) ?? 0;
+        const orbit = (shard.userData.orbit as number) ?? 0;
+        const fall = ((this.clock * 2.8 + phase) % 1.15) / 1.15;
+        const r = zone.radius * (0.15 + (Math.sin(orbit * 3 + phase) * 0.5 + 0.5) * 0.8);
+        shard.position.set(
+          Math.cos(orbit + this.clock * 0.35) * r,
+          2.4 - fall * 2.55,
+          Math.sin(orbit * 1.2) * 0.15,
+        );
+        shard.rotation.z = fall * 1.8 + phase;
+        shard.material.opacity = 0.25 + (1 - fall) * 0.55;
+        shard.visible = zone.life > 0.08;
+      }
     }
-    for (const [id, mesh] of this.blizzardViews) {
+    for (const [id, view] of this.blizzardViews) {
       if (seen.has(id)) {
         continue;
       }
-      this.scene.remove(mesh);
-      mesh.material.dispose();
-      mesh.geometry.dispose();
+      this.scene.remove(view.root);
+      view.ground.material.dispose();
+      view.ground.geometry.dispose();
+      view.ring.material.dispose();
+      view.ring.geometry.dispose();
+      for (const shard of view.shards) {
+        shard.material.dispose();
+        shard.geometry.dispose();
+      }
       this.blizzardViews.delete(id);
     }
   }

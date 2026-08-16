@@ -33,7 +33,7 @@ export function syncBannerCheckpoint(world: World): void {
 
 export function chooseRespawn(world: World, choice: RespawnChoice): void {
   const player = world.player;
-  if (player.hp > 0 || !player.awaitRespawn) {
+  if (!player.awaitRespawn) {
     return;
   }
   closeAllPanels(world);

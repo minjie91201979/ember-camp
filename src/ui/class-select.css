@@ -120,6 +120,88 @@
   color: #f4f6f5;
 }
 
+.class-select__confirm {
+  position: absolute;
+  inset: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgb(8 10 12 / 72%);
+}
+
+.class-select__confirm-card {
+  width: min(420px, 100%);
+  padding: 1.25rem 1.2rem 1.1rem;
+  border: 1px solid rgb(201 212 216 / 28%);
+  border-radius: 10px;
+  background: #151c22;
+  text-align: left;
+  color: #c9d4d8;
+}
+
+.class-select__confirm-card h2 {
+  margin: 0 0 0.55rem;
+  font-size: 1.15rem;
+  color: #f4f6f5;
+}
+
+.class-select__confirm-card p {
+  margin: 0 0 0.65rem;
+  font-size: 0.9rem;
+  line-height: 1.45;
+}
+
+.class-select__confirm-card b {
+  color: #e8d2bc;
+  font-weight: 600;
+}
+
+.class-select__confirm-save {
+  padding: 0.55rem 0.65rem;
+  border: 1px solid rgb(61 74 66 / 80%);
+  background: rgb(18 24 30 / 90%);
+  color: #9aada8;
+  font-size: 0.85rem !important;
+}
+
+.class-select__confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.class-select__confirm-actions button {
+  cursor: pointer;
+  padding: 0.45rem 0.9rem;
+  border: 1px solid rgb(61 74 66);
+  border-radius: 6px;
+  background: #1a242c;
+  color: #c9d4d8;
+  font: inherit;
+  font-size: 0.88rem;
+}
+
+.class-select__confirm-actions button:hover,
+.class-select__confirm-actions button:focus-visible {
+  outline: none;
+  border-color: #9aada8;
+  color: #f4f6f5;
+}
+
+.class-select__confirm-danger {
+  border-color: #a86a48 !important;
+  color: #e8b0a0 !important;
+}
+
+.class-select__confirm-danger:hover,
+.class-select__confirm-danger:focus-visible {
+  border-color: #c45c3e !important;
+  color: #f0d0c0 !important;
+}
+
 @media (max-width: 720px) {
   .class-select__grid {
     grid-template-columns: 1fr;

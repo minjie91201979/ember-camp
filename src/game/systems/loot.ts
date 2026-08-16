@@ -111,6 +111,13 @@ export function stepLoot(world: World, wantPick: boolean): void {
           sfx.play('deny');
           world.levelToastT = 1.4;
           world.levelToastText = bagAddFailText(world, loot.defId!);
+        }
+      }
+      keep.push(loot);
+      continue;
+    }
+
+    if (dist < PICK_RANGE) {
       const def = loot.kind === 'item' && loot.defId ? ITEM_DEFS[loot.defId] : undefined;
       const label =
         loot.kind === 'gold'

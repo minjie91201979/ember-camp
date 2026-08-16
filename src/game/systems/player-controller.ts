@@ -203,6 +203,9 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
   }
 
   const jumped = tryJump(player);
+  if (jumped) {
+    advanceTutorial(world, 'jump');
+  }
   const slowMult = player.petrifyT > 0 ? 0.22 : player.slowT > 0 ? 0.48 : 1;
   const sprintMult = player.sprintT > 0 ? PLAYER.sprintSpeedMult : 1;
   const rapidMult = rapidFireMoveMult(world);
@@ -276,6 +279,9 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
       player.vx = player.facing * (swing < 0.55 ? 5.2 : 2.4);
     } else if (player.attackKind === 'bash') {
       player.vx = player.facing * (swing < 0.5 ? 8.4 : 3.2);
+    } else if (player.attackKind === 'blizzard') {
+      // 引导站桩：不可走位（翻滚仍可打断）
+      player.vx = 0;
     } else if (
       player.attackKind === 'whirlwind' &&
       skillLevelOf(world, 'whirlwind') >= 3 &&
@@ -1056,22 +1062,26 @@ function noteStep(player: Player, dt: number): void {
 
 function killByFall(world: World): void {
   const player = world.player;
-  if (player.hp > 0) {
-    player.hp = 0;
-    player.deadT = 0;
-    player.deathCause = 'fall';
-    player.awaitRespawn = true;
-    player.state = 'dead';
+  if (player.awaitRespawn || player.hp <= 0) {
     player.y = Math.max(player.y, -0.85);
     player.prevY = player.y;
     player.vy = 0;
-    player.fallWarnT = 0;
-    world.shake = Math.max(world.shake, 0.6);
-    world.levelToastT = 1.6;
-    world.levelToastText = '坠落身亡';
-    applyDeathDurabilityLoss(world);
-    applyDeathLootLoss(world);
-    applyGearStats(player, world);
-    sfx.play('die');
+    return;
   }
+  player.hp = 0;
+  player.deadT = 0;
+  player.deathCause = 'fall';
+  player.awaitRespawn = true;
+  player.state = 'dead';
+  player.y = Math.max(player.y, -0.85);
+  player.prevY = player.y;
+  player.vy = 0;
+  player.fallWarnT = 0;
+  world.shake = Math.max(world.shake, 0.6);
+  world.levelToastT = 1.6;
+  world.levelToastText = '坠落身亡';
+  applyDeathDurabilityLoss(world);
+  applyDeathLootLoss(world);
+  applyGearStats(player, world);
+  sfx.play('die');
 }

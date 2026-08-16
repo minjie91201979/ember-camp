@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { PLAYER } from '../game/config';
 import { CONTROL_HELP } from '../game/data/controls';
+import { ZONE_FLIGHT_EDGES, ZONE_MAP_POS } from '../game/data/world-map-layout';
 import { PLAYER_LEVEL_CAP } from '../game/systems/stats';
 import { CHALLENGE_DURATION, challengeDurationOf } from '../game/systems/challenge';
 import type { AttrKey, BagSnapshotItem, CampShopRow, HudSnapshot, RespawnChoice } from '../game/types';
@@ -250,16 +251,7 @@ export function Hud({
   ];
   const hasDraft = vitals.attrs.some((row) => row.draft > 0);
   const worldMapNodes = vitals.worldMapNodes ?? [];
-  const worldHub = worldMapNodes.find((n) => n.zoneId === 'a01');
-  const worldSpokes = worldMapNodes.filter((n) => n.zoneId !== 'a01');
-  const worldRayEnds = worldSpokes.map((_, i) => {
-    const col = i % 4;
-    const row = Math.floor(i / 4);
-    return {
-      x: 28 + ((col + 0.5) / 4) * 68,
-      y: 10 + ((row + 0.5) / 3) * 80,
-    };
-  });
+  const worldNodeById = new Map(worldMapNodes.map((n) => [n.zoneId, n]));
   const audio = vitals.audio ?? { bgm: 0.85, sfx: 0.9, muted: false };
   const gameplay = vitals.gameplay ?? {
     showDamageNumbers: true,
@@ -392,7 +384,7 @@ export function Hud({
       className={`hud${vitals.awaitRespawn ? ' hud--dead' : ''}${vitals.fallWarn ? ' hud--pit-warn' : ''}${vitals.settingsOpen ? ' hud--paused' : ''}`}
     >
       <header className="hud__brand">
-        <p className="hud__kicker">阶段 87 · 越级战斗</p>
+        <p className="hud__kicker">阶段 93 · 暴风雪</p>
         <h1>烬营远征</h1>
         <p className="hud__sub">
           {vitals.zoneName}
@@ -1586,78 +1578,72 @@ export function Hud({
           <header className="inv__head">
             <h2>世界地图</h2>
             <p>
-              传送阵 · 烬营枢纽
+              烬土大陆 · 传送阵
               {vitals.ngPlusLevel > 0 ? ` · NG+${vitals.ngPlusLevel}` : ''}
             </p>
           </header>
           {vitals.campMessage ? <p className="camp__msg">{vitals.campMessage}</p> : null}
-          <div className="worldmap worldmap--hub" role="list">
+          <div className="worldmap worldmap--atlas" role="list">
+            <div className="worldmap__terrain" aria-hidden>
+              <picture>
+                <source srcSet="/maps/ember-continent.webp" type="image/webp" />
+                <img
+                  className="worldmap__art"
+                  src="/maps/ember-continent.png"
+                  alt=""
+                  draggable={false}
+                />
+              </picture>
+            </div>
             <svg
-              className="worldmap__rays"
+              className="worldmap__flight"
               viewBox="0 0 100 100"
               preserveAspectRatio="none"
               aria-hidden
             >
-              {worldSpokes.map((node, i) => {
-                const end = worldRayEnds[i]!;
+              {ZONE_FLIGHT_EDGES.map(([fromId, toId]) => {
+                const from = ZONE_MAP_POS[fromId];
+                const to = ZONE_MAP_POS[toId];
+                const fromNode = worldNodeById.get(fromId);
+                const toNode = worldNodeById.get(toId);
+                if (!from || !to) {
+                  return null;
+                }
+                const lit = Boolean(fromNode?.unlocked && toNode?.unlocked);
+                const half = Boolean(fromNode?.unlocked && !toNode?.unlocked);
                 return (
                   <line
-                    key={node.zoneId}
-                    x1={11}
-                    y1={50}
-                    x2={end.x}
-                    y2={end.y}
+                    key={`${fromId}-${toId}`}
+                    x1={from.x}
+                    y1={from.y}
+                    x2={to.x}
+                    y2={to.y}
                     className={
-                      node.unlocked ? 'worldmap__ray worldmap__ray--on' : 'worldmap__ray'
+                      lit
+                        ? 'worldmap__path worldmap__path--open'
+                        : half
+                          ? 'worldmap__path worldmap__path--next'
+                          : 'worldmap__path'
                     }
                   />
                 );
               })}
-              <circle cx={11} cy={50} r={1.6} className="worldmap__ray-core" />
             </svg>
-            <div className="worldmap__camp">
-              {worldHub ? (
-                <button
-                  type="button"
-                  role="listitem"
-                  className={[
-                    'worldmap__node',
-                    'worldmap__node--hub',
-                    worldHub.unlocked ? 'worldmap__node--open' : 'worldmap__node--locked',
-                    worldHub.current ? 'worldmap__node--here' : '',
-                    worldHub.bossCleared ? 'worldmap__node--cleared' : '',
-                  ]
-                    .filter(Boolean)
-                    .join(' ')}
-                  disabled={!worldHub.unlocked || !worldHub.travelId}
-                  title={worldHub.lockHint}
-                  onClick={() => {
-                    if (worldHub.travelId) {
-                      onTeleport(worldHub.travelId);
-                    }
-                  }}
-                >
-                  <span className="worldmap__badge">枢纽</span>
-                  <span className="worldmap__id">A01</span>
-                  <span className="worldmap__name">烬营 · 迷雾林地</span>
-                  <span className="worldmap__lv">
-                    {worldHub.levelMin}–{worldHub.levelMax}
-                  </span>
-                  <span className="worldmap__hint">{worldHub.lockHint}</span>
-                </button>
-              ) : null}
-            </div>
-            <div className="worldmap__ring">
-              {worldSpokes.map((node) => (
+            {worldMapNodes.map((node) => {
+              const pos = ZONE_MAP_POS[node.zoneId] ?? { x: 50, y: 50 };
+              const isHub = node.zoneId === 'a01';
+              return (
                 <button
                   key={node.zoneId}
                   type="button"
                   role="listitem"
+                  style={{ left: `${pos.x}%`, top: `${pos.y}%` }}
                   className={[
-                    'worldmap__node',
-                    node.unlocked ? 'worldmap__node--open' : 'worldmap__node--locked',
-                    node.current ? 'worldmap__node--here' : '',
-                    node.bossCleared ? 'worldmap__node--cleared' : '',
+                    'worldmap__pin',
+                    isHub ? 'worldmap__pin--hub' : '',
+                    node.unlocked ? 'worldmap__pin--open' : 'worldmap__pin--locked',
+                    node.current ? 'worldmap__pin--here' : '',
+                    node.bossCleared ? 'worldmap__pin--cleared' : '',
                   ]
                     .filter(Boolean)
                     .join(' ')}
@@ -1669,15 +1655,27 @@ export function Hud({
                     }
                   }}
                 >
-                  <span className="worldmap__id">{node.zoneId.toUpperCase()}</span>
-                  <span className="worldmap__name">{node.name}</span>
-                  <span className="worldmap__lv">
-                    {node.levelMin}–{node.levelMax}
+                  <i className="worldmap__pin-dot" aria-hidden />
+                  {node.current ? <em className="worldmap__you">你在此处</em> : null}
+                  <span className="worldmap__pin-name">
+                    {isHub ? '烬营' : node.name}
                   </span>
-                  <span className="worldmap__hint">{node.lockHint}</span>
+                  <span className="worldmap__pin-meta">
+                    {node.zoneId.toUpperCase()} · {node.levelMin}–{node.levelMax}
+                  </span>
+                  {!node.unlocked ? (
+                    <span className="worldmap__pin-lock">{node.lockHint}</span>
+                  ) : node.bossCleared ? (
+                    <span className="worldmap__pin-clear">已肃清</span>
+                  ) : null}
                 </button>
-              ))}
-            </div>
+              );
+            })}
+            <p className="worldmap__legend" aria-hidden>
+              <span className="worldmap__legend-item worldmap__legend-item--open">已解锁</span>
+              <span className="worldmap__legend-item worldmap__legend-item--path">航线</span>
+              <span className="worldmap__legend-item worldmap__legend-item--lock">未探索</span>
+            </p>
           </div>
           <p className="inv__hint">区内落点</p>
           <div className="panel__actions">
@@ -1702,7 +1700,7 @@ export function Hud({
               ? '击败终焉君王后可用：保留装备成长，怪物更强、掉落淬炼更好；开启后烬灰披风点亮并自动存档'
               : vitals.ngPlusLevel > 0
                 ? '烬灰披风已点亮 · 掉落装备可带周目淬炼'
-                : '烬营为枢纽 · 点击已解锁节点传送至入口；击败 BOSS 后区内落点含「门前」'}
+                : '点击地图钉点传送至区域入口；击败 BOSS 后区内落点含「门前」'}
             <br />
             <kbd>F</kbd> / <kbd>Esc</kbd> 关闭
           </p>

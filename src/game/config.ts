@@ -201,13 +201,24 @@ export const PLAYER = {
   fanOfKnivesDuration: 0.42,
   fanOfKnivesCooldown: 5.5,
   fanOfKnivesRadius: 2.0,
-  blizzardCost: 40,
-  blizzardDamageMult: 0.42,
-  blizzardDuration: 0.42,
-  blizzardCooldown: 7.5,
-  blizzardLife: 4.2,
-  blizzardRadius: 2.35,
-  blizzardTick: 0.35,
+  /** 暴风雪：引导落冰 AoE（参考魔兽经典引导 + 寒冰减速） */
+  blizzardCost: 48,
+  blizzardDamageMult: 0.62,
+  /** 引导时长：站桩落冰 */
+  blizzardDuration: 2.35,
+  blizzardCooldown: 8.5,
+  /** 风暴残留略长于引导 */
+  blizzardLife: 3.1,
+  blizzardRadius: 3.2,
+  blizzardTick: 0.4,
+  /** 落点相对角色朝向的水平偏移 */
+  blizzardPlaceRange: 2.55,
+  /** 寒冰减速刷新时长 */
+  blizzardChillRefresh: 1.25,
+  /** 寒冰移速倍率（越小越慢）；5 级技能更强 */
+  blizzardChillMove: 0.52,
+  blizzardChillMoveL5: 0.36,
+  /** 兼容旧字段：减速强度系数 */
   blizzardSlow: 1.15,
   rapidFireCost: 40,
   rapidFireDuration: 0.3,

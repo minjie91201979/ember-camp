@@ -621,36 +621,38 @@ export function activateVanish(world: World): void {
 
 export function placeBlizzard(world: World): void {
   const player = world.player;
+  const skillLv = skillLevelOf(world, 'blizzard');
   const dps =
     player.sp *
     PLAYER.blizzardDamageMult *
     skillMultForAttack(world, 'blizzard') *
-    (world.specId === 'frost' ? 1.1 : 1) *
+    (world.specId === 'frost' ? 1.12 : 1) *
     (world.specId === 'arcane' ? 1.06 : 1);
-  const slow =
-    PLAYER.blizzardSlow *
-    (world.specId === 'frost' ? 1.25 : 1) *
-    (skillMultForAttack(world, 'blizzard') >= 1.6 ? 1.15 : 1);
+  const chillMove =
+    (skillLv >= 5 ? PLAYER.blizzardChillMoveL5 : PLAYER.blizzardChillMove) *
+    (world.specId === 'frost' ? 0.92 : 1);
+  const placeX = player.x + player.facing * PLAYER.blizzardPlaceRange;
+  // 同时仅一场风暴（魔兽风：重新落冰覆盖）
+  world.blizzards = [];
   world.blizzardId += 1;
   world.blizzards.push({
     id: world.blizzardId,
-    x: player.x + player.facing * 0.85,
+    x: placeX,
     y: player.y + 0.05,
-    radius: PLAYER.blizzardRadius,
+    radius: PLAYER.blizzardRadius * (skillLv >= 3 ? 1.08 : 1),
     life: PLAYER.blizzardLife,
     tickAcc: 0,
     dps: Math.max(2, dps),
-    slow,
+    chillMove: Math.max(0.28, Math.min(0.75, chillMove)),
+    chillRefresh: PLAYER.blizzardChillRefresh * (world.specId === 'frost' ? 1.15 : 1),
+    ticks: 0,
   });
-  for (let i = 0; i < 6; i += 1) {
-    const a = (i / 6) * Math.PI * 2;
-    spawnDust(
-      world,
-      player.x + player.facing * 0.85 + Math.cos(a) * 1.1,
-      player.y + 0.15 + Math.sin(a) * 0.15,
-    );
+  for (let i = 0; i < 10; i += 1) {
+    const a = (i / 10) * Math.PI * 2;
+    const r = PLAYER.blizzardRadius * (0.35 + (i % 3) * 0.2);
+    spawnDust(world, placeX + Math.cos(a) * r, player.y + 0.2 + Math.sin(a) * 0.12);
   }
-  world.shake = Math.max(world.shake, 0.55);
+  world.shake = Math.max(world.shake, 0.62);
   sfx.play('bash');
 }
 
@@ -670,6 +672,14 @@ export function stepBlizzards(world: World, dt: number): void {
       continue;
     }
     zone.tickAcc = PLAYER.blizzardTick;
+    zone.ticks += 1;
+    // 落冰碎屑：每跳多点扬尘，表现暴风雪「砸」感
+    const shards = 4 + (zone.ticks % 3);
+    for (let i = 0; i < shards; i += 1) {
+      const a = Math.random() * Math.PI * 2;
+      const r = Math.random() * zone.radius * 0.92;
+      spawnDust(world, zone.x + Math.cos(a) * r, zone.y + 0.35 + Math.random() * 0.55);
+    }
     for (const dummy of world.dummies) {
       if (dummy.hp <= 0) {
         continue;
@@ -685,10 +695,11 @@ export function stepBlizzards(world: World, dt: number): void {
         Math.round(zone.dps * PLAYER.blizzardTick * playerOutgoingVsDummy(world, dummy)),
       );
       dummy.hp = Math.max(0, dummy.hp - value);
-      dummy.flash = Math.max(dummy.flash, 0.16);
-      dummy.vx *= 0.35;
-      // 用 stun 短促模拟减速卡顿；不打断过久
-      dummy.stunT = Math.max(dummy.stunT, Math.min(0.35, zone.slow * 0.22));
+      dummy.flash = Math.max(dummy.flash, 0.18);
+      dummy.vx *= 0.55;
+      // 寒冰：可移动但减速（非假晕）
+      dummy.chillT = Math.max(dummy.chillT ?? 0, zone.chillRefresh);
+      dummy.chillMove = zone.chillMove;
       spawnPopup(world, dummy.x, dummy.y + dummy.h + 0.15, value, dummy.hp <= 0, false);
       finishKill(world, dummy, wasAlive);
     }
@@ -976,7 +987,7 @@ function applyIceLanceHit(
   dummy: Dummy,
 ): void {
   const player = world.player;
-  const frozen = dummy.stunT > 0;
+  const frozen = dummy.stunT > 0 || (dummy.chillT ?? 0) > 0;
   const crit = Math.random() < player.critChance;
   const baseMult = frozen ? PLAYER.iceLanceFrozenMult : PLAYER.iceLanceDamageMult;
   const skillMult =

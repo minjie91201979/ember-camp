@@ -1,5 +1,5 @@
 import type { InventoryItem, World } from '../types';
-import { isPlayerClassId } from '../data/classes';
+import { CLASS_DEFS, isPlayerClassId } from '../data/classes';
 import { START_ZONE_ID, ZONES } from '../data/zones';
 import { applyGearStats } from './inventory';
 import { WEAPON_ENHANCE_MAX } from './camp';
@@ -34,6 +34,7 @@ export type SaveBlob = {
   tutorialDone?: boolean;
   tutorialStep?:
     | 'move'
+    | 'jump'
     | 'attack'
     | 'roll'
     | 'potion'
@@ -307,4 +308,36 @@ export function loadWorld(world: World): boolean {
 
 export function hasSave(): boolean {
   return Boolean(localStorage.getItem(SAVE_KEY));
+}
+
+/** 选职界面用：展示将要被覆盖的存档摘要。 */
+export type SaveSummary = {
+  className: string;
+  level: number;
+  zoneName: string;
+  ngPlusLevel: number;
+};
+
+export function peekSaveSummary(): SaveSummary | null {
+  try {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const blob = JSON.parse(raw) as SaveBlob;
+    const classId = blob.player?.classId;
+    const className = isPlayerClassId(classId)
+      ? CLASS_DEFS[classId].name
+      : '战士';
+    const zoneId = blob.zoneId ?? START_ZONE_ID;
+    const zoneName = ZONES[zoneId]?.name ?? zoneId;
+    return {
+      className,
+      level: Math.max(1, Math.floor(blob.player?.level ?? 1)),
+      zoneName,
+      ngPlusLevel: Math.max(0, Math.floor(blob.ngPlusLevel ?? 0)),
+    };
+  } catch {
+    return null;
+  }
 }

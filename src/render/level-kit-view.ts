@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { KIT_THEMES, type KitPiece, type KitThemeId } from '../game/data/level-kit';
+import { sceneThemeOf } from '../game/data/scene-themes';
 import { PALETTE } from './palette';
 import { cloneRepeat, type P0Textures } from './textures';
 
@@ -10,13 +11,14 @@ export function placeKitDecor(
 ): THREE.Group {
   const root = new THREE.Group();
   const theme = KIT_THEMES[themeId] ?? KIT_THEMES.woodland;
+  const scene = sceneThemeOf(themeId);
   for (const piece of pieces) {
     if (piece.kind === 'slope') {
       root.add(makeSlope(piece, theme.slopeTint, tex));
     } else if (piece.kind === 'secret-wall') {
-      root.add(makeSecretWall(piece, tex));
+      root.add(makeSecretWall(piece, scene.leafTint, tex));
     } else if (piece.kind === 'backdrop') {
-      root.add(makeBackdrop(piece, tex));
+      root.add(makeBackdrop(piece, scene.breakableTint, tex));
     }
   }
   return root;
@@ -50,12 +52,12 @@ function makeSlope(
   return mesh;
 }
 
-function makeSecretWall(piece: KitPiece, tex: P0Textures): THREE.Mesh {
+function makeSecretWall(piece: KitPiece, tint: number, tex: P0Textures): THREE.Mesh {
   const mesh = new THREE.Mesh(
     new THREE.BoxGeometry(piece.w, piece.h, 0.28),
     new THREE.MeshStandardMaterial({
       map: cloneRepeat(tex.moss, 1, 2),
-      color: 0x6e8a72,
+      color: tint,
       roughness: 0.9,
       transparent: true,
       opacity: 0.78,
@@ -67,12 +69,12 @@ function makeSecretWall(piece: KitPiece, tex: P0Textures): THREE.Mesh {
   return mesh;
 }
 
-function makeBackdrop(piece: KitPiece, tex: P0Textures): THREE.Mesh {
+function makeBackdrop(piece: KitPiece, tint: number, tex: P0Textures): THREE.Mesh {
   const mesh = new THREE.Mesh(
     new THREE.CylinderGeometry(piece.w * 0.45, piece.w * 0.55, piece.h, 6),
     new THREE.MeshStandardMaterial({
       map: cloneRepeat(tex.wood, 1, 1),
-      color: 0x8a7460,
+      color: tint,
       roughness: 0.92,
     }),
   );

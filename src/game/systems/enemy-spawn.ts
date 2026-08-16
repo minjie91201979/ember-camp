@@ -40,6 +40,8 @@ export function createDummyFromSpawn(
     flash: 0,
     deadT: 0,
     stunT: 0,
+    chillT: 0,
+    chillMove: 1,
     kind: def.kind,
     enemyId: def.id,
     name: def.name,

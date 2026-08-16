@@ -21,6 +21,10 @@ export function stepDummies(world: World, dt: number): void {
   for (const dummy of world.dummies) {
     dummy.flash = Math.max(0, dummy.flash - dt);
     dummy.stunT = Math.max(0, dummy.stunT - dt);
+    dummy.chillT = Math.max(0, (dummy.chillT ?? 0) - dt);
+    if (dummy.chillT <= 0) {
+      dummy.chillMove = 1;
+    }
     if (dummy.hp <= 0) {
       dummy.state = 'dead';
       dummy.vx = 0;
@@ -28,6 +32,8 @@ export function stepDummies(world: World, dt: number): void {
       dummy.castId = null;
       dummy.chargeDashT = 0;
       dummy.fuseT = 0;
+      dummy.chillT = 0;
+      dummy.chillMove = 1;
       dummy.deadT += dt;
       if (!dummy.noRespawn && dummy.deadT >= RESPAWN_DELAY) {
         const refreshed = createDummyFromSpawn(
@@ -48,7 +54,14 @@ export function stepDummies(world: World, dt: number): void {
     }
     dummy.deadT = 0;
 
+    const baseSpeed = dummy.moveSpeed;
+    const chillMult = dummy.chillT > 0 ? Math.min(1, dummy.chillMove || 0.52) : 1;
+    if (chillMult < 1) {
+      dummy.moveSpeed = baseSpeed * chillMult;
+    }
+
     if (dummy.boss && stepBoss(world, dummy, dt)) {
+      dummy.moveSpeed = baseSpeed;
       continue;
     }
 
@@ -57,6 +70,7 @@ export function stepDummies(world: World, dt: number): void {
       dummy.vx = 0;
       dummy.state = 'idle';
       dummy.attackT = 0;
+      dummy.moveSpeed = baseSpeed;
       continue;
     }
 
@@ -65,6 +79,7 @@ export function stepDummies(world: World, dt: number): void {
       dummy.vx = 0;
       dummy.attackT = 0;
       dummy.chargeDashT = 0;
+      dummy.moveSpeed = baseSpeed;
       continue;
     }
 
@@ -74,6 +89,7 @@ export function stepDummies(world: World, dt: number): void {
     }
 
     stepEnemyBehavior(world, dummy, dt);
+    dummy.moveSpeed = baseSpeed;
   }
 }
 

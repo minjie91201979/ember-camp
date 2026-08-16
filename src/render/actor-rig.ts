@@ -788,8 +788,7 @@ export function poseWarrior(rig: WarriorRig, player: Player, time: number): void
       player.attackKind === 'battle-shout' ||
       player.attackKind === 'kidney-shot' ||
       player.attackKind === 'fan-of-knives' ||
-      player.attackKind === 'eviscerate' ||
-      player.attackKind === 'blizzard'
+      player.attackKind === 'eviscerate'
     ) {
       const punch = u < 0.38 ? -0.15 - u * 2.6 : -1.05 + (u - 0.38) * 1.35;
       rig.root.rotation.z = u < 0.45 ? -0.12 - u * 0.18 : -0.2 + (u - 0.45) * 0.35;
@@ -803,6 +802,19 @@ export function poseWarrior(rig: WarriorRig, player: Player, time: number): void
       rig.thighR.rotation.z = -0.22;
       rig.shinL.rotation.z = -0.28;
       rig.shinR.rotation.z = -0.18;
+      plantFeet(rig);
+      return;
+    }
+    if (player.attackKind === 'blizzard') {
+      // 双臂上举引导落冰
+      const sway = Math.sin(u * Math.PI * 6) * 0.06;
+      rig.root.rotation.z = -0.04 + sway * 0.35;
+      rig.hip.position.y = 0.02;
+      rig.armL.rotation.z = -2.35 + sway;
+      rig.armR.rotation.z = -2.2 - sway;
+      rig.forearmR.rotation.z = -0.28;
+      rig.torso.rotation.z = -0.08;
+      rig.cloak.rotation.z = -0.12;
       plantFeet(rig);
       return;
     }
@@ -1007,12 +1019,14 @@ export function poseRotwolf(rig: BeastRig, dummy: Dummy, time: number): void {
   }
   const t = time * 8;
   const swing = Math.sin(t);
+  const chill = (dummy.chillT ?? 0) > 0;
   rig.body.position.y = Math.abs(Math.sin(t * 2)) * 0.04;
-  rig.legs[0]!.rotation.z = swing * 0.7;
-  rig.legs[1]!.rotation.z = -swing * 0.7;
-  rig.legs[2]!.rotation.z = -swing * 0.7;
-  rig.legs[3]!.rotation.z = swing * 0.7;
-  rig.head.rotation.z = Math.sin(t * 0.5) * 0.08;
+  rig.body.rotation.z = chill ? Math.sin(time * 16) * 0.05 : 0;
+  rig.legs[0]!.rotation.z = swing * (chill ? 0.45 : 0.7);
+  rig.legs[1]!.rotation.z = -swing * (chill ? 0.45 : 0.7);
+  rig.legs[2]!.rotation.z = -swing * (chill ? 0.45 : 0.7);
+  rig.legs[3]!.rotation.z = swing * (chill ? 0.45 : 0.7);
+  rig.head.rotation.z = Math.sin(t * 0.5) * 0.08 + (chill ? 0.05 : 0);
 }
 
 export function createTreantRig(): BeastRig {

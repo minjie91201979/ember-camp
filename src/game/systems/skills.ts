@@ -154,7 +154,7 @@ export const SKILL_DEFS: Record<SkillId, SkillDef> = {
     name: '暴风雪',
     reqLevel: 12,
     kind: 'blizzard',
-    desc: '地面持续范围法术',
+    desc: '引导落冰：前方大范围持续伤害并施加寒冰减速；5 级减速加强',
     classId: 'mage',
     implemented: true,
   },
