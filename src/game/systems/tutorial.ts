@@ -1,14 +1,16 @@
 import type { World } from '../types';
 
-const STEPS = ['move', 'attack', 'roll', 'potion', 'loot'] as const;
+const STEPS = ['move', 'attack', 'roll', 'potion', 'loot', 'minimap', 'secret'] as const;
 export type TutorialStep = (typeof STEPS)[number] | 'done';
 
 const HINTS: Record<(typeof STEPS)[number], string> = {
   move: '教学 · A / D 左右移动',
   attack: '教学 · J 或鼠标左键攻击',
   roll: '教学 · Shift 翻滚（无敌帧）',
-  potion: '教学 · R 喝药回复生命',
+  potion: '教学 · R 红药回复生命',
   loot: '教学 · 靠近掉落按 F 拾取',
+  minimap: '教学 · 看右上角小地图 · 走动留下足迹',
+  secret: '教学 · 探索高台与伪装墙 · 靠近秘密会在小地图标出',
 };
 
 export function tutorialHint(world: World): string | null {
@@ -22,7 +24,7 @@ export function tutorialHint(world: World): string | null {
   if (step === 'done') {
     return null;
   }
-  return HINTS[step] ?? null;
+  return HINTS[step as (typeof STEPS)[number]] ?? null;
 }
 
 export function advanceTutorial(world: World, event: (typeof STEPS)[number]): void {
@@ -45,6 +47,23 @@ export function advanceTutorial(world: World, event: (typeof STEPS)[number]): vo
   world.tutorialStep = next;
   world.levelToastT = 2.2;
   world.levelToastText = HINTS[next];
+}
+
+/** 足迹 / 秘密接近时推进后两步教学。 */
+export function stepTutorialExplore(world: World): void {
+  if (world.tutorialDone || world.zoneId !== 'a01') {
+    return;
+  }
+  if (world.tutorialStep === 'minimap' && world.exploreTrail.length >= 5) {
+    advanceTutorial(world, 'minimap');
+    return;
+  }
+  if (
+    world.tutorialStep === 'secret' &&
+    (Boolean(world.nearbySecretId) || Object.keys(world.secretsClaimed).length > 0)
+  ) {
+    advanceTutorial(world, 'secret');
+  }
 }
 
 export function maybeGuidePoints(world: World): void {

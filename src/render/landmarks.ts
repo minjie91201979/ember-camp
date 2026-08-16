@@ -152,7 +152,7 @@ export function createEndGate(tex: P0Textures): LandmarkView {
     addGateFlame(group, 0.04, 0.44, 0.32, 0.7),
   ];
 
-  group.position.set(42.45, 1, 0);
+  group.position.set(47.45, 1, 0);
 
   return {
     group,

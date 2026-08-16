@@ -1,3 +1,5 @@
+import { LOOT } from '../config';
+
 export type LootDrop = {
   kind: 'gold' | 'item';
   amount: number;
@@ -33,6 +35,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'grove-cleaver', chance: 0.18, qtyMin: 1, qtyMax: 1 },
       { defId: 'mist-blade', chance: 0.37, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-minor', chance: 0.45, qtyMin: 1, qtyMax: 1 },
+      { defId: 'ember-maul', chance: LOOT.legendaryEliteChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a01-boss': {
@@ -44,7 +47,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'mist-blade', chance: 0.55, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-minor', chance: 0.8, qtyMin: 1, qtyMax: 2 },
       { defId: 'rotwood-essence', chance: 1, qtyMin: 1, qtyMax: 1 },
-      { defId: 'ember-maul', chance: 0.1, qtyMin: 1, qtyMax: 1 },
+      { defId: 'ember-maul', chance: LOOT.legendaryBossChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a02-trash': {
@@ -124,6 +127,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'ember-fang', chance: 0.4, qtyMin: 1, qtyMax: 1 },
       { defId: 'ashen-cleaver', chance: 0.18, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-minor', chance: 0.55, qtyMin: 1, qtyMax: 1 },
+      { defId: 'ember-maul', chance: LOOT.legendaryEliteChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a04-boss': {
@@ -135,7 +139,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'ember-fang', chance: 0.55, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-minor', chance: 0.9, qtyMin: 2, qtyMax: 2 },
       { defId: 'cinder-heart', chance: 1, qtyMin: 1, qtyMax: 1 },
-      { defId: 'ember-maul', chance: 0.16, qtyMin: 1, qtyMax: 1 },
+      { defId: 'ember-maul', chance: LOOT.legendaryBossChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a05-trash': {
@@ -155,6 +159,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'bog-fang', chance: 0.4, qtyMin: 1, qtyMax: 1 },
       { defId: 'venom-cleaver', chance: 0.18, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-minor', chance: 0.55, qtyMin: 1, qtyMax: 1 },
+      { defId: 'cinder-staff', chance: LOOT.legendaryEliteChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a05-boss': {
@@ -165,7 +170,9 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'venom-cleaver', chance: 0.78, qtyMin: 1, qtyMax: 1 },
       { defId: 'bog-fang', chance: 0.55, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-minor', chance: 0.9, qtyMin: 2, qtyMax: 2 },
+      { defId: 'mana-potion-mid', chance: 0.55, qtyMin: 1, qtyMax: 2 },
       { defId: 'bog-heart', chance: 1, qtyMin: 1, qtyMax: 1 },
+      { defId: 'cinder-staff', chance: LOOT.legendaryBossChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a06-trash': {
@@ -185,6 +192,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'ice-fang', chance: 0.4, qtyMin: 1, qtyMax: 1 },
       { defId: 'glacier-cleaver', chance: 0.18, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-minor', chance: 0.55, qtyMin: 1, qtyMax: 1 },
+      { defId: 'cinder-staff', chance: LOOT.legendaryEliteChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a06-boss': {
@@ -195,7 +203,9 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'glacier-cleaver', chance: 0.78, qtyMin: 1, qtyMax: 1 },
       { defId: 'ice-fang', chance: 0.55, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-mid', chance: 0.9, qtyMin: 2, qtyMax: 2 },
+      { defId: 'mana-potion-mid', chance: 0.75, qtyMin: 1, qtyMax: 2 },
       { defId: 'frostfang-heart', chance: 1, qtyMin: 1, qtyMax: 1 },
+      { defId: 'cinder-staff', chance: LOOT.legendaryBossChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a07-trash': {
@@ -225,6 +235,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'sandstorm-cleaver', chance: 0.78, qtyMin: 1, qtyMax: 1 },
       { defId: 'scorpion-stinger', chance: 0.55, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-mid', chance: 0.9, qtyMin: 2, qtyMax: 2 },
+      { defId: 'mana-potion-mid', chance: 0.75, qtyMin: 1, qtyMax: 2 },
       { defId: 'storm-core', chance: 1, qtyMin: 1, qtyMax: 1 },
     ],
   },
@@ -245,6 +256,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'ruin-blade', chance: 0.4, qtyMin: 1, qtyMax: 1 },
       { defId: 'astral-cleaver', chance: 0.18, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-minor', chance: 0.55, qtyMin: 1, qtyMax: 1 },
+      { defId: 'venom-longbow', chance: LOOT.legendaryEliteChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a08-boss': {
@@ -255,8 +267,10 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'astral-cleaver', chance: 0.78, qtyMin: 1, qtyMax: 1 },
       { defId: 'ruin-blade', chance: 0.55, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-mid', chance: 0.9, qtyMin: 2, qtyMax: 2 },
+      { defId: 'mana-potion-mid', chance: 0.75, qtyMin: 1, qtyMax: 2 },
       { defId: 'golem-core', chance: 1, qtyMin: 1, qtyMax: 1 },
-      { defId: 'tide-buckler', chance: 0.14, qtyMin: 1, qtyMax: 1 },
+      { defId: 'tide-buckler', chance: LOOT.legendaryBossChance, qtyMin: 1, qtyMax: 1 },
+      { defId: 'venom-longbow', chance: LOOT.legendaryBossChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a09-trash': {
@@ -276,6 +290,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'cult-dagger', chance: 0.4, qtyMin: 1, qtyMax: 1 },
       { defId: 'tide-cleaver', chance: 0.18, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-minor', chance: 0.55, qtyMin: 1, qtyMax: 1 },
+      { defId: 'tide-buckler', chance: LOOT.legendaryEliteChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a09-boss': {
@@ -286,8 +301,10 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'tide-cleaver', chance: 0.78, qtyMin: 1, qtyMax: 1 },
       { defId: 'cult-dagger', chance: 0.55, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-mid', chance: 0.9, qtyMin: 2, qtyMax: 2 },
+      { defId: 'mana-potion-mid', chance: 0.75, qtyMin: 1, qtyMax: 2 },
       { defId: 'tide-lord-heart', chance: 1, qtyMin: 1, qtyMax: 1 },
-      { defId: 'tide-buckler', chance: 0.16, qtyMin: 1, qtyMax: 1 },
+      { defId: 'tide-buckler', chance: LOOT.legendaryBossChance, qtyMin: 1, qtyMax: 1 },
+      { defId: 'venom-longbow', chance: LOOT.legendaryBossChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a10-trash': {
@@ -317,6 +334,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'ridge-cleaver', chance: 0.78, qtyMin: 1, qtyMax: 1 },
       { defId: 'wing-blade', chance: 0.55, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-greater', chance: 0.9, qtyMin: 2, qtyMax: 2 },
+      { defId: 'mana-potion-greater', chance: 0.75, qtyMin: 1, qtyMax: 2 },
       { defId: 'rockwing-fang', chance: 1, qtyMin: 1, qtyMax: 1 },
     ],
   },
@@ -337,6 +355,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'rift-blade', chance: 0.4, qtyMin: 1, qtyMax: 1 },
       { defId: 'void-cleaver', chance: 0.18, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-minor', chance: 0.55, qtyMin: 1, qtyMax: 1 },
+      { defId: 'nightshade-fang', chance: LOOT.legendaryEliteChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a11-boss': {
@@ -346,8 +365,10 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'void-dust', chance: 1, qtyMin: 4, qtyMax: 6 },
       { defId: 'void-cleaver', chance: 0.78, qtyMin: 1, qtyMax: 1 },
       { defId: 'rift-blade', chance: 0.55, qtyMin: 1, qtyMax: 1 },
-      { defId: 'life-potion-greater', chance: 0.9, qtyMin: 2, qtyMax: 2 },
+      { defId: 'life-potion-ultra', chance: 0.85, qtyMin: 1, qtyMax: 2 },
+      { defId: 'mana-potion-ultra', chance: 0.7, qtyMin: 1, qtyMax: 2 },
       { defId: 'rift-core', chance: 1, qtyMin: 1, qtyMax: 1 },
+      { defId: 'nightshade-fang', chance: LOOT.legendaryBossChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a12-trash': {
@@ -367,6 +388,7 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'guard-blade', chance: 0.4, qtyMin: 1, qtyMax: 1 },
       { defId: 'end-cleaver', chance: 0.18, qtyMin: 1, qtyMax: 1 },
       { defId: 'life-potion-minor', chance: 0.55, qtyMin: 1, qtyMax: 1 },
+      { defId: 'rift-edge', chance: LOOT.legendaryEliteChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
   'a12-boss': {
@@ -376,9 +398,11 @@ export const LOOT_TABLES: Record<string, LootTable> = {
       { defId: 'throne-sigil', chance: 1, qtyMin: 5, qtyMax: 7 },
       { defId: 'end-cleaver', chance: 0.85, qtyMin: 1, qtyMax: 1 },
       { defId: 'guard-blade', chance: 0.6, qtyMin: 1, qtyMax: 1 },
-      { defId: 'life-potion-greater', chance: 1, qtyMin: 2, qtyMax: 3 },
+      { defId: 'life-potion-ultra', chance: 1, qtyMin: 2, qtyMax: 3 },
+      { defId: 'mana-potion-ultra', chance: 0.9, qtyMin: 1, qtyMax: 2 },
       { defId: 'end-king-crown', chance: 1, qtyMin: 1, qtyMax: 1 },
-      { defId: 'rift-edge', chance: 0.22, qtyMin: 1, qtyMax: 1 },
+      { defId: 'rift-edge', chance: LOOT.legendaryBossChance, qtyMin: 1, qtyMax: 1 },
+      { defId: 'nightshade-fang', chance: LOOT.legendaryBossChance, qtyMin: 1, qtyMax: 1 },
     ],
   },
 };
@@ -387,7 +411,7 @@ function randInt(min: number, max: number): number {
   return min + Math.floor(Math.random() * (max - min + 1));
 }
 
-/** 按掉落表掷一次，产出地面掉落清单（不含坐标）�?*/
+/** ????????????????????????*/
 export function rollLootTable(tableId: string): LootDrop[] {
   const table = LOOT_TABLES[tableId];
   if (!table) {

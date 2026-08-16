@@ -1,39 +1,49 @@
 import * as THREE from 'three';
-import { CAMERA, DAY_NIGHT, attackDurationOf } from '../game/config';
+import { CAMERA, DAY_NIGHT, PLAYER, attackDurationOf } from '../game/config';
+import type { PlayerClassId } from '../game/data/classes';
 import { ITEM_DEFS } from '../game/data/item-defs';
 import { DUST_LIFE, LEVEL_POPUP_LIFE, POPUP_LIFE } from '../game/systems/combat';
 import { LOOT_FLY_LIFE } from '../game/systems/loot';
 import type { Dummy, GroundLoot, LootFly, Rect, World } from '../game/types';
 import {
+  createPlayerRig,
   createRotwolfRig,
   createTreantRig,
-  createWarriorRig,
   flashWarrior,
   poseRotwolf,
   poseTreant,
   poseWarrior,
+  applyVanishStealth,
+  applyNgPlusCloak,
   type BeastRig,
   type WarriorRig,
 } from './actor-rig';
 import {
   createDamagePopupMesh,
   createDustMesh,
+  createGoldPopupMesh,
   createHpBar,
   createInteractPromptMesh,
   createLevelUpPopupMesh,
+  createMissPopupMesh,
+  createXpPopupMesh,
+  refreshDamagePopupMesh,
+  refreshGoldPopupMesh,
+  refreshXpPopupMesh,
   updateHpBar,
 } from './combat-fx';
 import { createBanner, type BannerView } from './banner';
 import { createCampfire, type CampfireView } from './campfire';
-import { createForge, createStall, createTorch, type PropView } from './camp-props';
+import { createApothecaryStall, createForge, createStall, createTorch, createWeaponsmithStall, type PropView } from './camp-props';
 import { createEndGate, createSecretChest, type SecretChestView } from './landmarks';
 import { createBreakableMesh, placeKitDecor } from './level-kit-view';
 import { createPalisade } from './palisade';
 import { PALETTE, QUALITY_COLOR } from './palette';
+import { skillCastFxOf } from './skill-cast-fx';
 import { createRiver, tickRiver } from './river';
 import { KIT_THEMES, type KitThemeId } from '../game/data/level-kit';
 import { sceneThemeOf } from '../game/data/scene-themes';
-import { ZONES } from '../game/data/zones';
+import { ZONES, isZoneEndWall } from '../game/data/zones';
 import { CAMP_NPCS } from '../game/systems/camp';
 import {
   buildFarPeakRange,
@@ -88,11 +98,21 @@ export class GameRenderer {
   >();
   private readonly bagTarget = new THREE.Vector3();
   private readonly dustPool: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>[] = [];
+  private readonly damagePopupPool: THREE.Mesh<
+    THREE.PlaneGeometry,
+    THREE.MeshBasicMaterial
+  >[] = [];
+  private readonly lootFlyPool: THREE.Mesh<
+    THREE.PlaneGeometry,
+    THREE.MeshBasicMaterial
+  >[] = [];
   private readonly banners: BannerView[] = [];
   private readonly scrollLayers: ScrollLayer[] = [];
   private readonly waterMats: THREE.ShaderMaterial[] = [];
   private playerMesh: THREE.Group | null = null;
   private warrior: WarriorRig | null = null;
+  private playerClassId: PlayerClassId = 'warrior';
+  private novaRing: THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial> | null = null;
   private attackArc: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null =
     null;
   private bashBurst: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> | null =
@@ -134,9 +154,18 @@ export class GameRenderer {
     number,
     THREE.Mesh<THREE.SphereGeometry, THREE.MeshBasicMaterial>
   >();
+  private readonly trapViews = new Map<
+    number,
+    THREE.Mesh<THREE.RingGeometry, THREE.MeshBasicMaterial>
+  >();
+  private readonly blizzardViews = new Map<
+    number,
+    THREE.Mesh<THREE.CircleGeometry, THREE.MeshBasicMaterial>
+  >();
   private fogColor = new THREE.Color(PALETTE.dayFog);
   private sceneTheme = sceneThemeOf('woodland');
   private zoneGroup: THREE.Group | null = null;
+  private bossGate: THREE.Group | null = null;
   private width = 1;
   private height = 1;
   private clock = 0;
@@ -152,7 +181,7 @@ export class GameRenderer {
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.22;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.BasicShadowMap;
 
     this.scene.background = new THREE.Color(PALETTE.skyDayTop);
     this.scene.fog = new THREE.Fog(this.fogColor, 22, 72);
@@ -168,17 +197,57 @@ export class GameRenderer {
     this.tex = await loadP0Textures();
     this.addParallax();
     this.addCelestials();
-    this.warrior = createWarriorRig();
+    this.mountPlayerRig('warrior');
+  }
+
+  setPlayerClass(classId: PlayerClassId): void {
+    if (this.playerClassId === classId && this.warrior) {
+      return;
+    }
+    this.mountPlayerRig(classId);
+  }
+
+  private mountPlayerRig(classId: PlayerClassId): void {
+    const tex = this.tex;
+    if (!tex) {
+      this.playerClassId = classId;
+      return;
+    }
+    if (this.playerMesh) {
+      this.scene.remove(this.playerMesh);
+      this.playerMesh = null;
+      this.warrior = null;
+      this.attackArc = null;
+      this.bashBurst = null;
+      this.novaRing = null;
+    }
+    this.playerClassId = classId;
+    this.warrior = createPlayerRig(classId);
     this.playerMesh = this.warrior.root;
-    const attack = this.makeAdditive(this.tex.slash, 1.7, 1.15);
+    const attack = this.makeAdditive(tex.slash, 1.7, 1.15);
     attack.position.set(0.85, 0.2, 0.3);
     attack.visible = false;
     this.attackArc = attack;
-    const bash = this.makeAdditive(this.tex.hitSpark, 1.55, 1.55);
+    const bash = this.makeAdditive(tex.hitSpark, 1.55, 1.55);
     bash.position.set(0.72, 0.22, 0.2);
     bash.visible = false;
     this.bashBurst = bash;
-    this.playerMesh.add(attack, bash);
+    const ring = new THREE.Mesh(
+      new THREE.RingGeometry(0.55, PLAYER.frostNovaRadius * 0.95, 32),
+      new THREE.MeshBasicMaterial({
+        color: PALETTE.mage,
+        transparent: true,
+        opacity: 0.55,
+        depthTest: false,
+        fog: false,
+        side: THREE.DoubleSide,
+      }),
+    );
+    ring.rotation.x = -Math.PI / 2;
+    ring.position.set(0, 0.08, 0);
+    ring.visible = false;
+    this.novaRing = ring;
+    this.playerMesh.add(attack, bash, ring);
     this.scene.add(this.playerMesh);
   }
 
@@ -325,48 +394,79 @@ export class GameRenderer {
       this.playerLight.intensity = (3.6 + night * 2.8) * flicker * levelBoost;
       if (p.levelFxT > 0) {
         this.playerLight.color.setHex(PALETTE.gold);
+      } else if (world.ngPlusLevel > 0) {
+        this.playerLight.color.setHex(PALETTE.gold);
+        this.playerLight.intensity *= 1.08;
       } else {
-        this.playerLight.color.setHex(PALETTE.ember);
+        this.playerLight.color.setHex(
+          this.playerClassId === 'mage'
+            ? PALETTE.mage
+            : this.playerClassId === 'hunter'
+              ? PALETTE.hunter
+              : this.playerClassId === 'rogue'
+                ? PALETTE.rogue
+                : PALETTE.ember,
+        );
       }
     }
     poseWarrior(this.warrior, p, this.clock);
+    applyNgPlusCloak(this.warrior, world.ngPlusLevel);
     const swinging = p.state === 'attack';
-    const slam = swinging && p.attackKind === 'slam';
-    const bash = swinging && p.attackKind === 'bash';
     const swingU = swinging ? 1 - p.attackT / attackDurationOf(p.attackKind) : 0;
     const impact = swinging && swingU > 0.32 && swingU < 0.72;
-    this.attackArc.visible = swinging && !bash;
-    if (this.attackArc.visible) {
-      const grow = slam ? 1.55 : 1.05;
+    const fx = swinging ? skillCastFxOf(p.attackKind) : null;
+    const mode = fx?.mode ?? 'none';
+
+    this.attackArc.visible = swinging && mode === 'arc';
+    if (this.attackArc.visible && fx) {
       const pulse = impact ? 1 + Math.sin(swingU * Math.PI * 2) * 0.12 : 0.85;
-      this.attackArc.scale.set(grow * pulse, (slam ? 1.4 : 1) * pulse, 1);
-      this.attackArc.rotation.z = slam ? -0.35 + swingU * 1.1 : -0.2 + swingU * 0.85;
+      this.attackArc.scale.set(fx.grow * pulse, fx.tall * pulse, 1);
+      this.attackArc.rotation.z =
+        fx.grow >= 1.4 ? -0.35 + swingU * 1.1 : -0.2 + swingU * 0.85;
       this.attackArc.material.opacity = impact ? 0.95 : 0.35 + swingU * 0.4;
-      this.attackArc.material.color.setHex(slam ? PALETTE.gold : 0xffffff);
+      this.attackArc.material.color.setHex(fx.color);
     }
-    this.bashBurst.visible = bash;
-    if (bash) {
-      const pulse = impact ? 1.35 + Math.sin(this.clock * 40) * 0.12 : 0.7 + swingU * 0.5;
+
+    this.bashBurst.visible = swinging && mode === 'burst';
+    if (this.bashBurst.visible && fx) {
+      const pulse = impact
+        ? fx.grow + Math.sin(this.clock * 40) * 0.12
+        : 0.7 + swingU * 0.5;
       this.bashBurst.scale.set(pulse, pulse, 1);
       this.bashBurst.material.opacity = impact ? 1 : 0.45;
-      this.bashBurst.material.color.setHex(PALETTE.moonlight);
+      this.bashBurst.material.color.setHex(fx.color);
     }
-    if (this.playerLight && impact && (slam || bash)) {
-      this.playerLight.intensity *= slam ? 1.35 : 1.25;
+
+    if (this.novaRing) {
+      this.novaRing.visible = swinging && mode === 'ring';
+      if (this.novaRing.visible && fx) {
+        const pulse = (0.9 + swingU * 0.45) * fx.grow;
+        this.novaRing.scale.setScalar(pulse);
+        this.novaRing.material.opacity = impact ? 0.75 : 0.4;
+        this.novaRing.material.color.setHex(fx.color);
+      }
     }
+
+    if (this.playerLight && impact && fx) {
+      this.playerLight.intensity *= fx.lightBoost;
+    }
+
     flashWarrior(
       this.warrior,
       p.state === 'hurt'
         ? 'hurt'
         : p.levelFxT > 0
           ? 'level'
-          : p.iFrame > 0
+          : p.iFrame > 0 && (p.vanishT ?? 0) <= 0
             ? 'iframe'
             : 'none',
     );
+    applyVanishStealth(this.warrior, (p.vanishT ?? 0) > 0);
 
+    const lookAheadX =
+      p.facing * (CAMERA.lookAhead + Math.min(Math.abs(p.vx), 8) * CAMERA.lookAheadVel);
     const k = 1 - Math.exp(-CAMERA.damp * dt);
-    this.camPos.x += (x - this.camPos.x) * k;
+    this.camPos.x += (x + lookAheadX - this.camPos.x) * k;
     this.camPos.y += (y + CAMERA.lookY - this.camPos.y) * k;
     const shake = world.shake;
     const ox = shake > 0 ? Math.sin(this.clock * 78) * shake * 0.16 : 0;
@@ -379,7 +479,7 @@ export class GameRenderer {
       this.frontLight.target.updateMatrixWorld();
     }
 
-    this.updateDayNight();
+    this.updateDayNight(world.player.awaitRespawn || world.player.hp <= 0);
     if (this.mistLayer) {
       this.mistLayer.offsetX = 1.2 + Math.sin(this.clock * 0.06) * 1.35;
       for (const child of this.mistLayer.obj.children) {
@@ -430,12 +530,17 @@ export class GameRenderer {
     this.syncLootFlies(world);
     this.syncHazards(world);
     this.syncProjectiles(world);
+    this.syncTraps(world);
+    this.syncBlizzards(world);
     this.syncBreakables(world);
     this.syncInteractPrompt(world);
     tickRiver(this.waterMats, this.clock);
     this.teleport?.tick(this.clock);
     this.campfire?.tick(this.clock);
     for (const banner of this.banners) {
+      const lit =
+        world.player.hasBanner && Math.abs(banner.x - world.player.bannerX) < 0.35;
+      banner.setLit(lit);
       banner.tick(this.clock);
     }
     for (const prop of this.campProps) {
@@ -444,8 +549,46 @@ export class GameRenderer {
     for (const chest of this.secretChests) {
       chest.tick(this.clock, Boolean(world.secretsClaimed[chest.id]));
     }
+    this.syncBossGate(world);
 
     this.renderer.render(this.scene, this.camera);
+  }
+
+  private syncBossGate(world: World): void {
+    if (!this.bossGate) {
+      const group = new THREE.Group();
+      const mat = new THREE.MeshBasicMaterial({
+        color: PALETTE.ember,
+        transparent: true,
+        opacity: 0.82,
+        depthTest: false,
+        fog: false,
+      });
+      const postL = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.4, 0.18), mat);
+      postL.position.set(-0.22, 1.2, 0.2);
+      const postR = new THREE.Mesh(new THREE.BoxGeometry(0.18, 2.4, 0.18), mat.clone());
+      postR.position.set(0.22, 1.2, 0.2);
+      const barMat = mat.clone();
+      barMat.color.setHex(PALETTE.gold);
+      for (let i = 0; i < 4; i += 1) {
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.08, 0.08), barMat.clone());
+        bar.position.set(0, 0.45 + i * 0.48, 0.22);
+        group.add(bar);
+      }
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.14, 0.2), barMat.clone());
+      lintel.position.set(0, 2.35, 0.2);
+      group.add(postL, postR, lintel);
+      group.visible = false;
+      this.scene.add(group);
+      this.bossGate = group;
+    }
+    const closed = world.bossGateClosed;
+    this.bossGate.visible = closed;
+    if (closed) {
+      this.bossGate.position.set(world.bossGateX, 0, 0.35);
+      const pulse = 0.75 + Math.sin(this.clock * 6) * 0.12;
+      this.bossGate.scale.set(1, pulse > 0.9 ? 1 : 0.98 + pulse * 0.02, 1);
+    }
   }
 
   dispose(): void {
@@ -477,7 +620,7 @@ export class GameRenderer {
     const sun = new THREE.DirectionalLight(0xfff1c8, 1.55);
     sun.position.set(10, 16, 12);
     sun.castShadow = true;
-    sun.shadow.mapSize.set(1024, 1024);
+    sun.shadow.mapSize.set(512, 512);
     sun.shadow.camera.left = -20;
     sun.shadow.camera.right = 20;
     sun.shadow.camera.top = 12;
@@ -557,7 +700,7 @@ export class GameRenderer {
     this.sunLayer = this.addScroll(sun, 1, 0.96, -6.2, 3.4);
   }
 
-  private updateDayNight(): void {
+  private updateDayNight(dead = false): void {
     const theme = this.sceneTheme;
     const ang = (this.clock / DAY_NIGHT.period) * Math.PI * 2;
     const day = 0.5 + 0.5 * Math.cos(ang);
@@ -608,16 +751,29 @@ export class GameRenderer {
       this.frontLight.color.setHex(PALETTE.moonlight).lerp(new THREE.Color(0xfff1c8), day);
     }
     this.fogColor.setHex(theme.fogNight).lerp(new THREE.Color(theme.fogDay), day);
+    if (dead) {
+      this.fogColor.lerp(new THREE.Color(0x1a1c22), 0.55);
+    }
     if (this.scene.fog instanceof THREE.Fog) {
       this.scene.fog.color.copy(this.fogColor);
       this.scene.fog.near = theme.fogNear + day * theme.fogNearDayAdd;
       this.scene.fog.far = theme.fogFar + day * theme.fogFarDayAdd;
+      if (dead) {
+        this.scene.fog.near *= 0.72;
+        this.scene.fog.far *= 0.78;
+      }
     }
     this.scene.background = new THREE.Color(theme.skyNight).lerp(
       new THREE.Color(theme.skyDay),
       day,
     );
-    this.renderer.toneMappingExposure = theme.exposureBase + day * theme.exposureDayAdd;
+    if (dead) {
+      (this.scene.background as THREE.Color).lerp(new THREE.Color(0x12141a), 0.4);
+      this.renderer.toneMappingExposure =
+        (theme.exposureBase + day * theme.exposureDayAdd) * 0.72;
+    } else {
+      this.renderer.toneMappingExposure = theme.exposureBase + day * theme.exposureDayAdd;
+    }
     if (this.skyMat) {
       this.skyMat.uniforms.uDay!.value = day;
     }
@@ -675,14 +831,16 @@ export class GameRenderer {
   private addTerrain(platforms: Rect[], rivers: Rect[], tex: P0Textures): void {
     const root = this.zoneRoot();
     const grounds = platforms
-      .filter((plat) => plat.y <= 0 && plat.h >= 0.8)
+      .filter((plat) => plat.y <= 0 && plat.h >= 0.8 && !isZoneEndWall(plat))
       .slice()
       .sort((a, b) => a.x - b.x);
     for (const ground of grounds) {
       this.addEarthSegment(ground.x, ground.w, tex);
     }
     for (const plat of platforms) {
-      if (plat.y > 0.2) {
+      if (isZoneEndWall(plat)) {
+        this.addEndBarrier(plat, tex);
+      } else if (plat.y > 0.2) {
         this.addRaisedPlatform(plat, tex);
       }
     }
@@ -708,6 +866,36 @@ export class GameRenderer {
         this.addPit(gapX, gapW, tex);
       }
     }
+  }
+
+  /** 关卡左右尽头石柱挡墙。 */
+  private addEndBarrier(plat: Rect, tex: P0Textures): void {
+    const root = this.zoneRoot();
+    const cx = plat.x + plat.w / 2;
+    const mat = new THREE.MeshStandardMaterial({
+      map: cloneRepeat(tex.rock, 1, 3),
+      color: this.sceneTheme.groundTint,
+      roughness: 0.92,
+    });
+    const pillar = new THREE.Mesh(
+      new THREE.BoxGeometry(plat.w * 1.15, plat.h, 1.45),
+      mat,
+    );
+    pillar.position.set(cx, plat.y + plat.h / 2, 0.15);
+    pillar.castShadow = true;
+    pillar.receiveShadow = true;
+    root.add(pillar);
+    const cap = new THREE.Mesh(
+      new THREE.BoxGeometry(plat.w * 1.45, 0.22, 1.65),
+      new THREE.MeshStandardMaterial({
+        map: cloneRepeat(tex.rock, 1, 1),
+        color: PALETTE.gold,
+        roughness: 0.85,
+      }),
+    );
+    cap.position.set(cx, plat.y + plat.h + 0.05, 0.15);
+    cap.castShadow = true;
+    root.add(cap);
   }
 
   private addEarthSegment(x: number, w: number, tex: P0Textures): void {
@@ -793,15 +981,17 @@ export class GameRenderer {
     root.add(this.teleport.group);
     this.campfire = createCampfire(tex);
     root.add(this.campfire.group);
-    for (const point of [{ x: 2.35 }, { x: 30.4 }]) {
+    for (const point of [{ x: 2.35 }, { x: 35.4 }]) {
       const banner = createBanner(tex, point.x);
       root.add(banner.group);
       this.banners.push(banner);
     }
     const forge = createForge(tex);
+    const weapons = createWeaponsmithStall(tex);
     const stall = createStall(tex);
-    root.add(forge.group, stall.group);
-    this.campProps.push(forge, stall);
+    const apothecary = createApothecaryStall(tex);
+    root.add(forge.group, weapons.group, stall.group, apothecary.group);
+    this.campProps.push(forge, weapons, stall, apothecary);
   }
 
   private addKitProps(tex: P0Textures, world: World): void {
@@ -809,7 +999,7 @@ export class GameRenderer {
     const zone = ZONES[world.zoneId];
     const torches =
       world.zoneId === 'a01'
-        ? [5.2, 13.4, 23.2, 33.6, 41.2]
+        ? [3.5, 10.2, 18.4, 28.6, 41.2]
         : world.zoneId === 'a03'
           ? [3.4, 16.2, 29.0, 41.6]
           : world.zoneId === 'a04'
@@ -872,22 +1062,42 @@ export class GameRenderer {
       seen.add(popup.id);
       let mesh = this.popupViews.get(popup.id);
       if (!mesh) {
-        mesh =
-          popup.kind === 'level'
-            ? createLevelUpPopupMesh(popup.value)
-            : createDamagePopupMesh(popup.value, popup.lethal, popup.crit);
+        if (popup.kind === 'level') {
+          mesh = createLevelUpPopupMesh(popup.value);
+        } else if (popup.kind === 'gold') {
+          mesh = createGoldPopupMesh(popup.value);
+        } else if (popup.kind === 'xp') {
+          mesh = createXpPopupMesh(popup.value);
+        } else if (popup.kind === 'miss') {
+          mesh = createMissPopupMesh();
+        } else {
+          mesh = this.damagePopupPool.pop() ?? createDamagePopupMesh(0, false, false);
+          refreshDamagePopupMesh(mesh, popup.value, popup.lethal, popup.crit);
+        }
+        mesh.visible = true;
         this.scene.add(mesh);
         this.popupViews.set(popup.id, mesh);
+      } else if (popup.kind === 'gold') {
+        refreshGoldPopupMesh(mesh, popup.value);
+      } else if (popup.kind === 'xp') {
+        refreshXpPopupMesh(mesh, popup.value);
       }
       const life = popup.kind === 'level' ? LEVEL_POPUP_LIFE : POPUP_LIFE;
       const t = popup.age / life;
-      const rise = popup.kind === 'level' ? 1.55 : 1.15;
+      const rise =
+        popup.kind === 'level'
+          ? 1.55
+          : popup.kind === 'gold' || popup.kind === 'xp' || popup.kind === 'miss'
+            ? 1.35
+            : 1.15;
       mesh.position.set(popup.x, popup.y + t * rise, 1.4);
       mesh.material.opacity = 1 - t * t;
       const s =
         popup.kind === 'level'
           ? 1.15 + Math.sin(t * Math.PI) * 0.35
-          : (popup.crit ? 1.25 : 1) + t * 0.22;
+          : popup.kind === 'gold' || popup.kind === 'xp' || popup.kind === 'miss'
+            ? 1.05 + t * 0.18
+            : (popup.crit ? 1.25 : 1) + t * 0.22;
       mesh.scale.set(s, s, 1);
     }
     for (const [id, mesh] of this.popupViews) {
@@ -895,9 +1105,15 @@ export class GameRenderer {
         continue;
       }
       this.scene.remove(mesh);
-      mesh.material.map?.dispose();
-      mesh.material.dispose();
-      mesh.geometry.dispose();
+      mesh.visible = false;
+      const isLevel = mesh.geometry.parameters.width > 1.8;
+      if (!isLevel && this.damagePopupPool.length < 40) {
+        this.damagePopupPool.push(mesh);
+      } else {
+        mesh.material.map?.dispose();
+        mesh.material.dispose();
+        mesh.geometry.dispose();
+      }
       this.popupViews.delete(id);
     }
   }
@@ -980,7 +1196,9 @@ export class GameRenderer {
       seen.add(fly.id);
       let mesh = this.lootFlyViews.get(fly.id);
       if (!mesh) {
-        mesh = createLootFlyMesh(fly);
+        mesh = this.lootFlyPool.pop() ?? createLootFlyMesh();
+        styleLootFlyMesh(mesh, fly);
+        mesh.visible = true;
         this.scene.add(mesh);
         this.lootFlyViews.set(fly.id, mesh);
       }
@@ -991,7 +1209,8 @@ export class GameRenderer {
       const y = fly.startY + (this.bagTarget.y - fly.startY) * ease + arc;
       mesh.position.set(x, y, 0.55);
       const shrink = 1 - ease * 0.55;
-      mesh.scale.set(shrink, shrink, 1);
+      const base = (mesh.userData.flyBase as number | undefined) ?? 1;
+      mesh.scale.set(base * shrink, base * shrink, 1);
       mesh.material.opacity = u < 0.75 ? 0.95 : 0.95 * (1 - (u - 0.75) / 0.25);
       mesh.rotation.z = this.clock * 6 + fly.id;
     }
@@ -1000,8 +1219,13 @@ export class GameRenderer {
         continue;
       }
       this.scene.remove(mesh);
-      mesh.geometry.dispose();
-      mesh.material.dispose();
+      mesh.visible = false;
+      if (this.lootFlyPool.length < 32) {
+        this.lootFlyPool.push(mesh);
+      } else {
+        mesh.geometry.dispose();
+        mesh.material.dispose();
+      }
       this.lootFlyViews.delete(id);
     }
   }
@@ -1033,17 +1257,17 @@ export class GameRenderer {
     let y = 0;
     if (npc) {
       key = `npc:${npc.id}`;
-      label = npc.name;
+      label = `F ${npc.prompt}`;
       x = npc.x;
       y = npc.promptY;
     } else if (hub) {
       key = 'hub-portal';
-      label = '打开传送';
+      label = 'F 打开传送';
       x = hub.x;
       y = hub.promptY;
     } else if (secret) {
       key = `secret:${secret.id}`;
-      label = '宝箱';
+      label = 'F 开启宝箱';
       x = secret.x;
       y = secret.y + 1.35;
     } else {
@@ -1164,10 +1388,39 @@ export class GameRenderer {
       seen.add(shot.id);
       let mesh = this.projectileViews.get(shot.id);
       if (!mesh) {
+        const isFireball = shot.visual === 'fireball';
+        const isArcane = shot.visual === 'arcane';
+        const isArrow = shot.visual === 'arrow' || shot.visual === 'arrow-fan';
+        const isPyro = shot.visual === 'pyroblast';
+        const isIce = shot.visual === 'ice-lance';
         mesh = new THREE.Mesh(
-          new THREE.SphereGeometry(0.18, 8, 8),
+          new THREE.SphereGeometry(
+            isPyro
+              ? 0.3
+              : isIce
+                ? 0.14
+                : isFireball
+                  ? 0.22
+                  : isArrow
+                    ? 0.1
+                    : isArcane
+                      ? 0.16
+                      : 0.18,
+            8,
+            8,
+          ),
           new THREE.MeshBasicMaterial({
-            color: PALETTE.mage,
+            color: isPyro
+              ? 0xff6a3d
+              : isIce
+                ? 0xa8e8ff
+                : isFireball
+                  ? PALETTE.ember
+                  : isArcane
+                    ? 0x7ec8e3
+                    : isArrow
+                      ? PALETTE.gold
+                      : PALETTE.mage,
             transparent: true,
             depthTest: false,
             fog: false,
@@ -1179,7 +1432,9 @@ export class GameRenderer {
       }
       mesh.position.set(shot.x, shot.y, 0.55);
       const pulse = 0.9 + Math.sin(this.clock * 18 + shot.id) * 0.15;
-      mesh.scale.setScalar(pulse);
+      mesh.scale.setScalar(
+        pulse * (shot.visual === 'fireball' || shot.visual === 'pyroblast' ? 1.15 : 1),
+      );
     }
     for (const [id, mesh] of this.projectileViews) {
       if (seen.has(id)) {
@@ -1189,6 +1444,84 @@ export class GameRenderer {
       mesh.material.dispose();
       mesh.geometry.dispose();
       this.projectileViews.delete(id);
+    }
+  }
+
+  private syncTraps(world: World): void {
+    const seen = new Set<number>();
+    for (const trap of world.traps ?? []) {
+      seen.add(trap.id);
+      let mesh = this.trapViews.get(trap.id);
+      if (!mesh) {
+        mesh = new THREE.Mesh(
+          new THREE.RingGeometry(0.28, 0.48, 16),
+          new THREE.MeshBasicMaterial({
+            color: trap.kind === 'explosive' ? PALETTE.ember : PALETTE.hunter,
+            transparent: true,
+            depthTest: false,
+            fog: false,
+            opacity: 0.75,
+            side: THREE.DoubleSide,
+          }),
+        );
+        mesh.rotation.x = -Math.PI / 2;
+        this.scene.add(mesh);
+        this.trapViews.set(trap.id, mesh);
+      }
+      mesh.material.color.setHex(trap.kind === 'explosive' ? PALETTE.ember : PALETTE.hunter);
+      mesh.position.set(trap.x, trap.y + 0.04, 0.4);
+      const fusePulse =
+        trap.kind === 'explosive' && trap.fuse > 0
+          ? 0.7 + Math.sin(this.clock * 14 + trap.id) * 0.25
+          : 0.85 + Math.sin(this.clock * 6 + trap.id) * 0.1;
+      mesh.scale.setScalar(fusePulse);
+      mesh.material.opacity = 0.45 + Math.min(1, trap.life / 4) * 0.35;
+    }
+    for (const [id, mesh] of this.trapViews) {
+      if (seen.has(id)) {
+        continue;
+      }
+      this.scene.remove(mesh);
+      mesh.material.dispose();
+      mesh.geometry.dispose();
+      this.trapViews.delete(id);
+    }
+  }
+
+  private syncBlizzards(world: World): void {
+    const seen = new Set<number>();
+    for (const zone of world.blizzards ?? []) {
+      seen.add(zone.id);
+      let mesh = this.blizzardViews.get(zone.id);
+      if (!mesh) {
+        mesh = new THREE.Mesh(
+          new THREE.CircleGeometry(1, 28),
+          new THREE.MeshBasicMaterial({
+            color: PALETTE.mage,
+            transparent: true,
+            depthTest: false,
+            fog: false,
+            opacity: 0.35,
+            side: THREE.DoubleSide,
+          }),
+        );
+        mesh.rotation.x = -Math.PI / 2;
+        this.scene.add(mesh);
+        this.blizzardViews.set(zone.id, mesh);
+      }
+      mesh.position.set(zone.x, zone.y + 0.06, 0.35);
+      const pulse = 0.92 + Math.sin(this.clock * 8 + zone.id) * 0.08;
+      mesh.scale.setScalar(zone.radius * pulse);
+      mesh.material.opacity = 0.22 + Math.min(1, zone.life / 3) * 0.28;
+    }
+    for (const [id, mesh] of this.blizzardViews) {
+      if (seen.has(id)) {
+        continue;
+      }
+      this.scene.remove(mesh);
+      mesh.material.dispose();
+      mesh.geometry.dispose();
+      this.blizzardViews.delete(id);
     }
   }
 
@@ -1309,15 +1642,11 @@ function createLootMesh(loot: GroundLoot): THREE.Group {
   return root;
 }
 
-function createLootFlyMesh(
-  fly: LootFly,
-): THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> {
-  const color = fly.kind === 'gold' ? PALETTE.gold : QUALITY_COLOR[fly.quality];
-  const size = fly.kind === 'gold' ? 0.26 : 0.32;
+function createLootFlyMesh(): THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial> {
   return new THREE.Mesh(
-    new THREE.PlaneGeometry(size, size),
+    new THREE.PlaneGeometry(0.3, 0.3),
     new THREE.MeshBasicMaterial({
-      color,
+      color: PALETTE.gold,
       transparent: true,
       depthTest: false,
       fog: false,
@@ -1327,4 +1656,14 @@ function createLootFlyMesh(
       toneMapped: false,
     }),
   );
+}
+
+function styleLootFlyMesh(
+  mesh: THREE.Mesh<THREE.PlaneGeometry, THREE.MeshBasicMaterial>,
+  fly: LootFly,
+): void {
+  const color = fly.kind === 'gold' ? PALETTE.gold : QUALITY_COLOR[fly.quality];
+  const size = fly.kind === 'gold' ? 0.26 : 0.32;
+  mesh.material.color.setHex(color);
+  mesh.userData.flyBase = size / 0.3;
 }

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { PLAYER, attackDurationOf } from '../game/config';
+import type { PlayerClassId } from '../game/data/classes';
 import type { Dummy, Player } from '../game/types';
 import { dummyAttackProgress } from '../game/systems/dummy-ai';
 import { PALETTE } from './palette';
@@ -172,6 +173,325 @@ export function createWarriorRig(): WarriorRig {
   };
 }
 
+/** 法师：瘦体布甲剪影 + 法杖。 */
+export function createMageRig(): WarriorRig {
+  const robe = mat(PALETTE.mage, { metal: 0.08, rough: 0.72, emit: 0.05, emitColor: PALETTE.mage });
+  const dark = mat(0x3a4a52, { metal: 0.12, rough: 0.65 });
+  const trim = mat(PALETTE.moonlight, { metal: 0.35, rough: 0.4, emit: 0.06 });
+  const gold = mat(PALETTE.gold, { metal: 0.5, rough: 0.3, emit: 0.1 });
+  const cloth = mat(0x4a5e66, { metal: 0, rough: 0.85 });
+  const wood = mat(PALETTE.hunter, { metal: 0.05, rough: 0.7 });
+  const mats = [robe, dark, trim, gold, cloth, wood];
+
+  const root = new THREE.Group();
+  root.scale.set(0.92, 1.02, 0.88);
+  const hip = new THREE.Group();
+  const torso = new THREE.Group();
+  torso.position.y = 0.18;
+  torso.add(box(0.24, 0.68, 0.4, robe, 0.2));
+  torso.add(box(0.28, 0.14, 0.44, dark, 0.48));
+  torso.add(box(0.14, 0.06, 0.16, gold, 0.46));
+  torso.add(box(0.26, 0.26, 0.26, dark, 0.74));
+  torso.add(box(0.3, 0.36, 0.34, cloth, -0.2));
+
+  const hood = box(0.26, 0.2, 0.3, robe, 0.96);
+  const face = box(0.2, 0.12, 0.22, dark, 0.9);
+  torso.add(hood, face);
+
+  const cloakMat = createCloakMat();
+  const cloak = addWornCloak(torso, cloth, dark, cloakMat);
+
+  const armL = new THREE.Group();
+  armL.position.set(0.02, 0.5, -0.24);
+  const upperL = limb(0.3, 0.12, 0.12, robe);
+  armL.add(upperL.pivot);
+
+  const armR = new THREE.Group();
+  armR.position.set(0.04, 0.5, 0.24);
+  const upperR = limb(0.28, 0.11, 0.11, robe);
+  const forearmR = limb(0.26, 0.1, 0.1, dark);
+  forearmR.pivot.position.y = -0.28;
+  forearmR.pivot.add(makeStaff(wood, gold, trim));
+  upperR.pivot.add(forearmR.pivot);
+  armR.add(upperR.pivot);
+
+  const thighL = limb(0.32, 0.16, 0.16, cloth);
+  const shinL = limb(0.28, 0.14, 0.14, dark);
+  shinL.pivot.position.y = -0.32;
+  const footL = makeFoot(dark);
+  footL.position.y = -0.28;
+  shinL.pivot.add(footL);
+  thighL.pivot.add(shinL.pivot);
+  thighL.pivot.position.set(0.02, 0.02, -0.1);
+
+  const thighR = limb(0.32, 0.16, 0.16, cloth);
+  const shinR = limb(0.28, 0.14, 0.14, dark);
+  shinR.pivot.position.y = -0.32;
+  const footR = makeFoot(dark);
+  footR.position.y = -0.28;
+  shinR.pivot.add(footR);
+  thighR.pivot.add(shinR.pivot);
+  thighR.pivot.position.set(0.02, 0.02, 0.1);
+
+  torso.add(armL, armR);
+  hip.add(torso, thighL.pivot, thighR.pivot);
+  root.add(hip);
+
+  return {
+    root,
+    hip,
+    torso,
+    cloak,
+    cloakMat,
+    armL,
+    armR,
+    forearmR: forearmR.pivot,
+    thighL: thighL.pivot,
+    thighR: thighR.pivot,
+    shinL: shinL.pivot,
+    shinR: shinR.pivot,
+    footL,
+    footR,
+    mats,
+  };
+}
+
+/** 猎人：锁甲剪影 + 短弓。 */
+export function createHunterRig(): WarriorRig {
+  const leather = mat(PALETTE.hunter, { metal: 0.12, rough: 0.62, emit: 0.03 });
+  const dark = mat(0x3a3228, { metal: 0.15, rough: 0.55 });
+  const trim = mat(PALETTE.gold, { metal: 0.4, rough: 0.35, emit: 0.06 });
+  const cloth = mat(0x5a4a3a, { metal: 0, rough: 0.8 });
+  const iron = mat(PALETTE.mossDark, { metal: 0.45, rough: 0.4 });
+  const wood = mat(0x6b5340, { metal: 0.05, rough: 0.72 });
+  const mats = [leather, dark, trim, cloth, iron, wood];
+
+  const root = new THREE.Group();
+  root.scale.set(0.96, 1, 0.94);
+  const hip = new THREE.Group();
+  const torso = new THREE.Group();
+  torso.position.y = 0.18;
+  torso.add(box(0.28, 0.6, 0.46, leather, 0.2));
+  torso.add(box(0.32, 0.14, 0.5, dark, 0.48));
+  torso.add(box(0.16, 0.07, 0.18, trim, 0.46));
+  torso.add(box(0.3, 0.24, 0.28, dark, 0.74));
+  torso.add(box(0.26, 0.28, 0.32, cloth, -0.16));
+
+  const hood = box(0.26, 0.18, 0.32, leather, 0.96);
+  const face = box(0.2, 0.1, 0.24, dark, 0.9);
+  torso.add(hood, face);
+
+  const cloakMat = createCloakMat();
+  const cloak = addWornCloak(torso, cloth, dark, cloakMat);
+
+  const armL = new THREE.Group();
+  armL.position.set(0.02, 0.48, -0.26);
+  const upperL = limb(0.3, 0.13, 0.13, leather);
+  armL.add(upperL.pivot);
+
+  const armR = new THREE.Group();
+  armR.position.set(0.04, 0.48, 0.26);
+  const upperR = limb(0.28, 0.12, 0.12, leather);
+  const forearmR = limb(0.26, 0.11, 0.11, dark);
+  forearmR.pivot.position.y = -0.28;
+  forearmR.pivot.add(makeBow(wood, trim, iron));
+  upperR.pivot.add(forearmR.pivot);
+  armR.add(upperR.pivot);
+
+  const thighL = limb(0.33, 0.17, 0.17, dark);
+  const shinL = limb(0.28, 0.15, 0.15, iron);
+  shinL.pivot.position.y = -0.33;
+  const footL = makeFoot(iron);
+  footL.position.y = -0.28;
+  shinL.pivot.add(footL);
+  thighL.pivot.add(shinL.pivot);
+  thighL.pivot.position.set(0.02, 0.02, -0.1);
+
+  const thighR = limb(0.33, 0.17, 0.17, dark);
+  const shinR = limb(0.28, 0.15, 0.15, iron);
+  shinR.pivot.position.y = -0.33;
+  const footR = makeFoot(iron);
+  footR.position.y = -0.28;
+  shinR.pivot.add(footR);
+  thighR.pivot.add(shinR.pivot);
+  thighR.pivot.position.set(0.02, 0.02, 0.1);
+
+  torso.add(armL, armR);
+  hip.add(torso, thighL.pivot, thighR.pivot);
+  root.add(hip);
+
+  return {
+    root,
+    hip,
+    torso,
+    cloak,
+    cloakMat,
+    armL,
+    armR,
+    forearmR: forearmR.pivot,
+    thighL: thighL.pivot,
+    thighR: thighR.pivot,
+    shinL: shinL.pivot,
+    shinR: shinR.pivot,
+    footL,
+    footR,
+    mats,
+  };
+}
+
+export function createPlayerRig(classId: PlayerClassId): WarriorRig {
+  if (classId === 'mage') {
+    return createMageRig();
+  }
+  if (classId === 'hunter') {
+    return createHunterRig();
+  }
+  if (classId === 'rogue') {
+    return createRogueRig();
+  }
+  return createWarriorRig();
+}
+
+/** 盗贼：皮甲剪影 + 匕首。 */
+export function createRogueRig(): WarriorRig {
+  const leather = mat(PALETTE.rogue, { metal: 0.1, rough: 0.68, emit: 0.02 });
+  const dark = mat(0x2a2630, { metal: 0.18, rough: 0.55 });
+  const trim = mat(PALETTE.moonlight, { metal: 0.4, rough: 0.32, emit: 0.05 });
+  const cloth = mat(0x3d3844, { metal: 0, rough: 0.82 });
+  const iron = mat(PALETTE.mossDark, { metal: 0.5, rough: 0.38 });
+  const blade = mat(PALETTE.moonlight, { metal: 0.7, rough: 0.22, emit: 0.06 });
+  const mats = [leather, dark, trim, cloth, iron, blade];
+
+  const root = new THREE.Group();
+  root.scale.set(0.94, 0.98, 0.9);
+  const hip = new THREE.Group();
+  const torso = new THREE.Group();
+  torso.position.y = 0.18;
+  torso.add(box(0.26, 0.58, 0.42, leather, 0.2));
+  torso.add(box(0.3, 0.12, 0.46, dark, 0.48));
+  torso.add(box(0.14, 0.06, 0.16, trim, 0.46));
+  torso.add(box(0.28, 0.22, 0.26, dark, 0.72));
+  torso.add(box(0.24, 0.3, 0.3, cloth, -0.16));
+
+  const hood = box(0.24, 0.18, 0.3, leather, 0.95);
+  const face = box(0.18, 0.1, 0.22, dark, 0.89);
+  torso.add(hood, face);
+
+  const cloakMat = createCloakMat();
+  const cloak = addWornCloak(torso, cloth, dark, cloakMat);
+
+  const armL = new THREE.Group();
+  armL.position.set(0.02, 0.48, -0.24);
+  const upperL = limb(0.28, 0.12, 0.12, leather);
+  const forearmL = limb(0.24, 0.1, 0.1, dark);
+  forearmL.pivot.position.y = -0.28;
+  forearmL.pivot.add(makeDagger(iron, blade, -1));
+  upperL.pivot.add(forearmL.pivot);
+  armL.add(upperL.pivot);
+
+  const armR = new THREE.Group();
+  armR.position.set(0.04, 0.48, 0.24);
+  const upperR = limb(0.28, 0.12, 0.12, leather);
+  const forearmR = limb(0.24, 0.1, 0.1, dark);
+  forearmR.pivot.position.y = -0.28;
+  forearmR.pivot.add(makeDagger(iron, blade, 1));
+  upperR.pivot.add(forearmR.pivot);
+  armR.add(upperR.pivot);
+
+  const thighL = limb(0.32, 0.15, 0.15, dark);
+  const shinL = limb(0.27, 0.13, 0.13, iron);
+  shinL.pivot.position.y = -0.32;
+  const footL = makeFoot(iron);
+  footL.position.y = -0.27;
+  shinL.pivot.add(footL);
+  thighL.pivot.add(shinL.pivot);
+  thighL.pivot.position.set(0.02, 0.02, -0.09);
+
+  const thighR = limb(0.32, 0.15, 0.15, dark);
+  const shinR = limb(0.27, 0.13, 0.13, iron);
+  shinR.pivot.position.y = -0.32;
+  const footR = makeFoot(iron);
+  footR.position.y = -0.27;
+  shinR.pivot.add(footR);
+  thighR.pivot.add(shinR.pivot);
+  thighR.pivot.position.set(0.02, 0.02, 0.09);
+
+  torso.add(armL, armR);
+  hip.add(torso, thighL.pivot, thighR.pivot);
+  root.add(hip);
+
+  return {
+    root,
+    hip,
+    torso,
+    cloak,
+    cloakMat,
+    armL,
+    armR,
+    forearmR: forearmR.pivot,
+    thighL: thighL.pivot,
+    thighR: thighR.pivot,
+    shinL: shinL.pivot,
+    shinR: shinR.pivot,
+    footL,
+    footR,
+    mats,
+  };
+}
+
+function makeDagger(
+  hilt: THREE.MeshStandardMaterial,
+  blade: THREE.MeshStandardMaterial,
+  side: 1 | -1,
+): THREE.Group {
+  const g = new THREE.Group();
+  g.position.set(0.05 * side, -0.12, 0.02 * side);
+  const grip = box(0.08, 0.16, 0.06, hilt);
+  const steel = box(0.06, 0.42, 0.04, blade);
+  steel.position.y = -0.28;
+  g.add(grip, steel);
+  return g;
+}
+
+function makeBow(
+  wood: THREE.MeshStandardMaterial,
+  trim: THREE.MeshStandardMaterial,
+  stringMat: THREE.MeshStandardMaterial,
+): THREE.Group {
+  const bow = new THREE.Group();
+  bow.position.set(0.06, -0.15, 0.02);
+  const limbU = box(0.08, 0.55, 0.06, wood);
+  limbU.position.set(0.12, 0.2, 0);
+  limbU.rotation.z = 0.35;
+  const limbD = box(0.08, 0.55, 0.06, wood);
+  limbD.position.set(0.12, -0.2, 0);
+  limbD.rotation.z = -0.35;
+  const grip = box(0.1, 0.16, 0.08, trim);
+  grip.position.set(0.08, 0, 0);
+  const string = box(0.02, 0.72, 0.02, stringMat);
+  string.position.set(0.22, 0, 0);
+  bow.add(limbU, limbD, grip, string);
+  return bow;
+}
+
+function makeStaff(
+  wood: THREE.MeshStandardMaterial,
+  gold: THREE.MeshStandardMaterial,
+  crystal: THREE.MeshStandardMaterial,
+): THREE.Group {
+  const staff = new THREE.Group();
+  staff.position.set(0.08, -0.2, 0.02);
+  const shaft = box(1.15, 0.06, 0.06, wood);
+  shaft.position.x = 0.45;
+  const tip = new THREE.Mesh(new THREE.OctahedronGeometry(0.12, 0), crystal);
+  tip.position.x = 1.08;
+  tip.castShadow = true;
+  const band = box(0.08, 0.1, 0.1, gold);
+  band.position.x = 0.95;
+  staff.add(shaft, tip, band);
+  return staff;
+}
+
 function makeSword(
   gold: THREE.MeshStandardMaterial,
   dark: THREE.MeshStandardMaterial,
@@ -211,6 +531,43 @@ export function flashWarrior(rig: WarriorRig, mode: WarriorFlash): void {
       material.emissive.setHex(material.userData.baseEmitColor as number);
       material.emissiveIntensity = material.userData.baseEmit as number;
     }
+  }
+}
+
+/** 消失：半透明 + 略偏夜影色；结束恢复。 */
+export function applyVanishStealth(rig: WarriorRig, stealth: boolean): void {
+  for (const material of rig.mats) {
+    if (material.userData.baseOpacity === undefined) {
+      material.userData.baseOpacity = material.opacity;
+      material.userData.baseTransparent = material.transparent;
+      material.userData.baseColorHex = material.color.getHex();
+      material.userData.baseDepthWrite = material.depthWrite;
+    }
+    if (stealth) {
+      material.transparent = true;
+      material.opacity = 0.35;
+      material.depthWrite = false;
+      material.color.setHex(PALETTE.rogue);
+      material.emissive.setHex(PALETTE.moonlight);
+      material.emissiveIntensity = 0.22;
+    } else {
+      material.transparent = Boolean(material.userData.baseTransparent);
+      material.opacity = Number(material.userData.baseOpacity);
+      material.depthWrite = Boolean(material.userData.baseDepthWrite ?? true);
+      material.color.setHex(Number(material.userData.baseColorHex));
+    }
+  }
+  const cloak = rig.cloakMat;
+  if (cloak.userData.baseOpacity === undefined) {
+    cloak.userData.baseOpacity = cloak.opacity;
+    cloak.userData.baseTransparent = cloak.transparent;
+  }
+  if (stealth) {
+    cloak.transparent = true;
+    cloak.opacity = 0.28;
+  } else {
+    cloak.transparent = Boolean(cloak.userData.baseTransparent);
+    cloak.opacity = Number(cloak.userData.baseOpacity ?? 1);
   }
 }
 
@@ -332,6 +689,19 @@ function tickCloak(rig: WarriorRig, player: Player, time: number): void {
   rig.cloakMat.uniforms.uGust!.value = cloakGust(player.state);
 }
 
+/** NG+：披风描边偏烬金。 */
+export function applyNgPlusCloak(rig: WarriorRig, ngPlusLevel: number): void {
+  const trim = rig.cloakMat.uniforms.uTrim?.value as THREE.Color | undefined;
+  if (!trim) {
+    return;
+  }
+  if (ngPlusLevel > 0) {
+    trim.setHex(PALETTE.gold);
+  } else {
+    trim.setHex(PALETTE.ember);
+  }
+}
+
 function makeFoot(material: THREE.MeshStandardMaterial): THREE.Group {
   const pivot = new THREE.Group();
   const sole = box(0.28, 0.08, 0.16, material, -0.03);
@@ -408,7 +778,19 @@ export function poseWarrior(rig: WarriorRig, player: Player, time: number): void
 
   if (player.state === 'attack') {
     const u = 1 - player.attackT / attackDurationOf(player.attackKind);
-    if (player.attackKind === 'bash') {
+    if (
+      player.attackKind === 'bash' ||
+      player.attackKind === 'frost-nova' ||
+      player.attackKind === 'trap' ||
+      player.attackKind === 'explosive-trap' ||
+      player.attackKind === 'ice-lance' ||
+      player.attackKind === 'whirlwind' ||
+      player.attackKind === 'battle-shout' ||
+      player.attackKind === 'kidney-shot' ||
+      player.attackKind === 'fan-of-knives' ||
+      player.attackKind === 'eviscerate' ||
+      player.attackKind === 'blizzard'
+    ) {
       const punch = u < 0.38 ? -0.15 - u * 2.6 : -1.05 + (u - 0.38) * 1.35;
       rig.root.rotation.z = u < 0.45 ? -0.12 - u * 0.18 : -0.2 + (u - 0.45) * 0.35;
       rig.hip.position.y = u < 0.4 ? u * 0.04 : 0.016 - (u - 0.4) * 0.03;
@@ -424,20 +806,85 @@ export function poseWarrior(rig: WarriorRig, player: Player, time: number): void
       plantFeet(rig);
       return;
     }
-    const heavy = player.attackKind === 'slam' ? 1.35 : 1;
+    const heavy =
+      player.attackKind === 'slam' ||
+      player.attackKind === 'fireball' ||
+      player.attackKind === 'arcane-missiles' ||
+      player.attackKind === 'aimed-shot' ||
+      player.attackKind === 'multi-shot' ||
+      player.attackKind === 'shadow-strike' ||
+      player.attackKind === 'poison-blade' ||
+      player.attackKind === 'pyroblast'
+        ? 1.35
+        : 1;
     const slash =
       u < 0.35 ? -0.95 - u * 0.75 : u < 0.7 ? -1.2 + (u - 0.35) * 5.6 : 0.75 - (u - 0.7) * 1.5;
-    if (player.attackKind === 'slam') {
+    if (
+      player.attackKind === 'slam' ||
+      player.attackKind === 'fireball' ||
+      player.attackKind === 'arcane-missiles' ||
+      player.attackKind === 'blink' ||
+      player.attackKind === 'aimed-shot' ||
+      player.attackKind === 'disengage' ||
+      player.attackKind === 'multi-shot' ||
+      player.attackKind === 'shadow-strike' ||
+      player.attackKind === 'poison-blade' ||
+      player.attackKind === 'sprint' ||
+      player.attackKind === 'pyroblast' ||
+      player.attackKind === 'rapid-fire'
+    ) {
       rig.root.rotation.z = u < 0.4 ? -0.08 - u * 0.2 : -0.16 + (u - 0.4) * 0.28;
       rig.hip.position.y = u < 0.45 ? 0.05 * Math.sin(u * Math.PI) : 0;
       rig.cloak.rotation.z = -0.05 - Math.min(u, 0.55) * 0.08;
     }
+    if (
+      player.attackKind === 'blink' ||
+      player.attackKind === 'disengage' ||
+      player.attackKind === 'sprint' ||
+      player.attackKind === 'vanish'
+    ) {
+      rig.armL.rotation.z = -0.8;
+      rig.armR.rotation.z = -0.6;
+      plantFeet(rig);
+      return;
+    }
     rig.armR.rotation.z = slash * heavy;
     rig.forearmR.rotation.z = u < 0.4 ? 0.25 : -0.42;
-    rig.armL.rotation.z = player.attackKind === 'slam' ? 0.7 : 0.35;
-    rig.torso.rotation.z = slash * (player.attackKind === 'slam' ? 0.28 : 0.12);
-    rig.thighL.rotation.z = player.attackKind === 'slam' ? 0.22 : 0.12;
-    rig.thighR.rotation.z = player.attackKind === 'slam' ? -0.28 : -0.18;
+    rig.armL.rotation.z =
+      player.attackKind === 'slam' ||
+      player.attackKind === 'fireball' ||
+      player.attackKind === 'arcane-missiles' ||
+      player.attackKind === 'aimed-shot' ||
+      player.attackKind === 'multi-shot' ||
+      player.attackKind === 'shadow-strike' ||
+      player.attackKind === 'poison-blade'
+        ? 0.7
+        : 0.35;
+    rig.torso.rotation.z =
+      slash *
+      (player.attackKind === 'slam' ||
+      player.attackKind === 'fireball' ||
+      player.attackKind === 'arcane-missiles' ||
+      player.attackKind === 'aimed-shot' ||
+      player.attackKind === 'multi-shot' ||
+      player.attackKind === 'shadow-strike' ||
+      player.attackKind === 'poison-blade'
+        ? 0.28
+        : 0.12);
+    rig.thighL.rotation.z =
+      player.attackKind === 'slam' ||
+      player.attackKind === 'fireball' ||
+      player.attackKind === 'aimed-shot' ||
+      player.attackKind === 'shadow-strike'
+        ? 0.22
+        : 0.12;
+    rig.thighR.rotation.z =
+      player.attackKind === 'slam' ||
+      player.attackKind === 'fireball' ||
+      player.attackKind === 'aimed-shot' ||
+      player.attackKind === 'shadow-strike'
+        ? -0.28
+        : -0.18;
     rig.shinL.rotation.z = -0.22;
     rig.shinR.rotation.z = -0.18;
     plantFeet(rig);

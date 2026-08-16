@@ -1,5 +1,6 @@
 import { WORLD } from '../config';
-import { ZONES, zonePlatforms, type ZoneDef } from '../data/zones';
+import { START_ZONE_ID, ZONES, zonePlatforms, type ZoneDef } from '../data/zones';
+import { ENEMY_DEFS } from '../data/enemy-defs';
 import { createBreakablesFromZone } from './breakables';
 import { createDummyFromSpawn } from './enemy-spawn';
 import { closeCamp } from './camp';
@@ -32,6 +33,93 @@ export type TravelNode = {
   localOnly?: boolean;
 };
 
+export type WorldMapNode = {
+  zoneId: string;
+  name: string;
+  levelMin: number;
+  levelMax: number;
+  unlocked: boolean;
+  bossCleared: boolean;
+  current: boolean;
+  /** 已解锁时可传送的入口节点 id */
+  travelId: string | null;
+  lockHint: string;
+};
+
+/** 世界地图区域顺序（不含试炼） */
+export const WORLD_MAP_ZONE_IDS = [
+  'a01',
+  'a02',
+  'a03',
+  'a04',
+  'a05',
+  'a06',
+  'a07',
+  'a08',
+  'a09',
+  'a10',
+  'a11',
+  'a12',
+] as const;
+
+const ZONE_ENTRY_TRAVEL: Record<string, string> = {
+  a01: 'a01-camp',
+  a02: 'a02-entry',
+  a03: 'a03-entry',
+  a04: 'a04-entry',
+  a05: 'a05-entry',
+  a06: 'a06-entry',
+  a07: 'a07-entry',
+  a08: 'a08-entry',
+  a09: 'a09-entry',
+  a10: 'a10-entry',
+  a11: 'a11-entry',
+  a12: 'a12-entry',
+};
+
+/** 击败该区 BOSS 后解锁的「门前」落点（约在禁锢门一侧，可从营地直达刷 BOSS） */
+const ZONE_BOSS_FRONT: Record<
+  string,
+  { travelId: string; bossId: string; x: number; y: number }
+> = {
+  a01: { travelId: 'a01-gate', bossId: 'rotwood', x: 38.2, y: 1.15 },
+  a02: { travelId: 'a02-boss', bossId: 'rock-warden', x: 34.2, y: 1.15 },
+  a03: { travelId: 'a03-boss', bossId: 'tide-crab', x: 36.2, y: 1.15 },
+  a04: { travelId: 'a04-boss', bossId: 'cinder-lizard', x: 35.6, y: 1.15 },
+  a05: { travelId: 'a05-boss', bossId: 'bog-mother', x: 36.0, y: 1.15 },
+  a06: { travelId: 'a06-boss', bossId: 'frostfang', x: 36.2, y: 1.15 },
+  a07: { travelId: 'a07-boss', bossId: 'storm-scorpion', x: 36.0, y: 1.15 },
+  a08: { travelId: 'a08-boss', bossId: 'golem-mage', x: 36.2, y: 1.15 },
+  a09: { travelId: 'a09-boss', bossId: 'tide-lord', x: 36.4, y: 1.15 },
+  a10: { travelId: 'a10-boss', bossId: 'rockwing', x: 36.2, y: 1.15 },
+  a11: { travelId: 'a11-boss', bossId: 'rift-warden', x: 36.0, y: 1.15 },
+  a12: { travelId: 'a12-boss', bossId: 'end-king', x: 36.4, y: 1.15 },
+};
+
+export function isBossFrontUnlocked(world: World, zoneId: string): boolean {
+  const front = ZONE_BOSS_FRONT[zoneId];
+  return Boolean(front && world.bossKills[front.bossId]);
+}
+
+export function bossFrontTravelId(zoneId: string): string | null {
+  return ZONE_BOSS_FRONT[zoneId]?.travelId ?? null;
+}
+
+/** 解锁该区所需击败的 BOSS enemyId */
+const ZONE_REQUIRE_BOSS: Record<string, string> = {
+  a02: 'rotwood',
+  a03: 'rock-warden',
+  a04: 'tide-crab',
+  a05: 'cinder-lizard',
+  a06: 'bog-mother',
+  a07: 'frostfang',
+  a08: 'storm-scorpion',
+  a09: 'golem-mage',
+  a10: 'tide-lord',
+  a11: 'rockwing',
+  a12: 'rift-warden',
+};
+
 export function defaultUnlockedZones(): string[] {
   return ['a01'];
 }
@@ -62,13 +150,61 @@ export function applyBossUnlock(world: World, bossEnemyId: string): void {
   }
 }
 
+/** 若本击杀解锁了门前传送且 toast 未被「解锁下一区」覆盖，则提示门前。 */
+export function noteBossFrontUnlockToast(world: World, bossEnemyId: string): void {
+  const zoneId = WORLD_MAP_ZONE_IDS.find(
+    (id) => ZONE_BOSS_FRONT[id]?.bossId === bossEnemyId,
+  );
+  if (!zoneId || !isBossFrontUnlocked(world, zoneId)) {
+    return;
+  }
+  if (world.levelToastText.includes('解锁区域') || bossEnemyId === 'end-king') {
+    return;
+  }
+  world.levelToastT = Math.max(world.levelToastT, 2.6);
+  if (world.levelToastText.startsWith('击败')) {
+    world.levelToastText = `${world.levelToastText} · 门前传送已开`;
+    return;
+  }
+  const zone = ZONES[zoneId];
+  world.levelToastText = `解锁 ${(zone?.name ?? zoneId)} 门前传送`;
+}
+
+/** 全 12 区节点图：解锁 / BOSS / 当前区状态。 */
+export function listWorldMapNodes(world: World): WorldMapNode[] {
+  return WORLD_MAP_ZONE_IDS.map((zoneId) => {
+    const zone = ZONES[zoneId]!;
+    const unlocked = isZoneUnlocked(world, zoneId);
+    const bossId = zone.bossId;
+    const bossCleared = Boolean(bossId && world.bossKills[bossId]);
+    const reqBoss = ZONE_REQUIRE_BOSS[zoneId];
+    const reqName = reqBoss ? ENEMY_DEFS[reqBoss as keyof typeof ENEMY_DEFS]?.name : null;
+    return {
+      zoneId,
+      name: zone.name,
+      levelMin: zone.levelMin,
+      levelMax: zone.levelMax,
+      unlocked,
+      bossCleared,
+      current: world.zoneId === zoneId,
+      travelId: unlocked ? (ZONE_ENTRY_TRAVEL[zoneId] ?? null) : null,
+      lockHint: unlocked
+        ? bossCleared
+          ? 'BOSS 已击败 · 可传门前'
+          : '已解锁'
+        : reqName
+          ? `击败 ${reqName}`
+          : '尚未解锁',
+    };
+  });
+}
+
 export function listTravelNodes(world: World): TravelNode[] {
   const nodes: TravelNode[] = [];
   if (isZoneUnlocked(world, 'a01')) {
     nodes.push(
       { id: 'a01-camp', label: '烬营出生点', zoneId: 'a01', x: WORLD.spawnX, y: WORLD.spawnY },
-      { id: 'a01-mid', label: '林地中段', zoneId: 'a01', x: 21.2, y: 1.15, localOnly: true },
-      { id: 'a01-gate', label: '石门前', zoneId: 'a01', x: 38.6, y: 1.15, localOnly: true },
+      { id: 'a01-mid', label: '林地中段', zoneId: 'a01', x: 26.2, y: 1.15, localOnly: true },
     );
   }
   if (isZoneUnlocked(world, 'a02')) {
@@ -280,6 +416,20 @@ export function listTravelNodes(world: World): TravelNode[] {
       },
     );
   }
+  for (const zoneId of WORLD_MAP_ZONE_IDS) {
+    if (!isZoneUnlocked(world, zoneId) || !isBossFrontUnlocked(world, zoneId)) {
+      continue;
+    }
+    const front = ZONE_BOSS_FRONT[zoneId]!;
+    const zone = ZONES[zoneId];
+    nodes.push({
+      id: front.travelId,
+      label: zone ? `${zone.name} · 门前` : 'BOSS 门前',
+      zoneId,
+      x: front.x,
+      y: front.y,
+    });
+  }
   return nodes.filter((n) => {
     if (n.localOnly && world.zoneId !== n.zoneId) {
       return false;
@@ -289,15 +439,24 @@ export function listTravelNodes(world: World): TravelNode[] {
 }
 
 /** 切换区域内容（保留玩家成长与背包）。 */
-export function enterZone(world: World, zoneId: string, spawnX?: number, spawnY?: number): boolean {
+export function enterZone(
+  world: World,
+  zoneId: string,
+  spawnX?: number,
+  spawnY?: number,
+  opts?: { keepToast?: boolean },
+): boolean {
   const zone = ZONES[zoneId];
   if (!zone || !isZoneUnlocked(world, zoneId)) {
     sfx.play('deny');
     return false;
   }
-  if (world.challengeActive && zoneId !== 'challenge') {
+  const abandonedChallenge = world.challengeActive && zoneId !== 'challenge';
+  if (abandonedChallenge) {
     world.challengeActive = false;
     world.challengeT = 0;
+    world.challengeFloor = 0;
+    world.challengeRunAffixes = [];
   }
   populateZone(world, zone, spawnX, spawnY);
   closeCamp(world);
@@ -305,11 +464,27 @@ export function enterZone(world: World, zoneId: string, spawnX?: number, spawnY?
   world.charOpen = false;
   world.skillOpen = false;
   world.catalogOpen = false;
+  world.levelUpOpen = false;
   world.specPickOpen = false;
   clearAttrDraft(world);
   sfx.play('jump');
-  world.levelToastT = 1.8;
-  world.levelToastText = `抵达 · ${zone.name}`;
+  if (opts?.keepToast) {
+    // 保留调用方已写好的结果提示（如试炼成功/失败）
+  } else if (abandonedChallenge) {
+    world.levelToastT = 2.2;
+    world.levelToastText = '已放弃词缀试炼';
+    world.zoneAnnounceT = 0;
+  } else if (zoneId === START_ZONE_ID && world.offerNgPlusHint) {
+    world.levelToastT = 2.8;
+    world.levelToastText = '通关奖励 · 打开传送阵可开启 NG+';
+    world.zoneAnnounceT = 0;
+  } else {
+    world.zoneAnnounceT = 3.4;
+    world.zoneAnnounceName = zone.name;
+    world.zoneAnnounceSub = `推荐等级 ${zone.levelMin}–${zone.levelMax}`;
+    world.levelToastT = 0;
+    world.levelToastText = '';
+  }
   return true;
 }
 
@@ -339,13 +514,23 @@ export function populateZone(
   world.platforms = zonePlatforms(zone, {});
   world.hazards = [];
   world.projectiles = [];
+  world.traps = [];
+  world.trapId = 0;
+  world.blizzards = [];
+  world.blizzardId = 0;
   world.loots = [];
   world.lootFlies = [];
   world.nearbyLootName = null;
+  world.nearbyLootCompare = null;
+  world.nearbyLootTone = null;
   world.nearbySecretId = null;
   world.nearbyCamp = null;
   world.nearbyHubPortal = false;
   world.campMessage = '';
+  world.bossGateClosed = false;
+  world.bossGateX = 0;
+  world.slowMoT = 0;
+  world.exploreTrail = [];
 
   const x = spawnX ?? zone.spawns[0]?.x ?? WORLD.spawnX;
   const y = spawnY ?? 1.15;

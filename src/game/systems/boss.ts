@@ -1,6 +1,6 @@
 import { hurtPlayer } from './combat';
 import { createDummyFromSpawn } from './enemy-spawn';
-import { applyBossUnlock } from './zone-travel';
+import { applyBossUnlock, noteBossFrontUnlockToast } from './zone-travel';
 import { autoSaveWorld } from './save';
 import type { Dummy, Hazard, World } from '../types';
 import { sfx } from '../../audio/sfx';
@@ -1566,14 +1566,20 @@ export function noteBossKill(world: World, dummy: Dummy): void {
     return;
   }
   world.bossKills[dummy.enemyId] = true;
+  if (dummy.enemyId === 'end-king') {
+    world.offerNgPlusHint = true;
+  }
   world.levelToastT = 2.4;
   world.levelToastText =
     dummy.enemyId === 'end-king'
       ? world.ngPlusLevel > 0
-        ? `通关 NG+${world.ngPlusLevel} · 可再开新周目`
-        : '通关 · 终焉王座 · 传送阵可开 NG+'
+        ? `通关 NG+${world.ngPlusLevel} · 回营地传送阵可再开周目`
+        : '通关 · 回营地传送阵开启 NG+'
       : `击败 ${dummy.name}`;
   applyBossUnlock(world, dummy.enemyId);
+  noteBossFrontUnlockToast(world, dummy.enemyId);
+  world.slowMoT = Math.max(world.slowMoT, 1.2);
+  world.shake = Math.max(world.shake, 1.1);
   sfx.play('levelup');
   autoSaveWorld(world);
 }

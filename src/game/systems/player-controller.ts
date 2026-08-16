@@ -2,16 +2,46 @@ import { sfx } from '../../audio/sfx';
 import { PLAYER, attackDurationOf } from '../config';
 import type { InputFrame } from '../../input/keyboard';
 import {
+  activateSprint,
+  activateVanish,
+  activateRapidFire,
+  activateManaShield,
+  activateBattleShout,
+  activateSliceAndDice,
+  applyFrostNova,
   applyPlayerHit,
+  applyWhirlwind,
+  applyCleaveHits,
+  applyFanOfKnives,
+  beginArcaneMissiles,
+  blinkPlayer,
+  chargePlayer,
+  disengagePlayer,
+  placeBlizzard,
+  placeHunterTrap,
+  placeExplosiveTrap,
   spawnDust,
+  spawnHunterArrow,
+  spawnIceLance,
   spawnLandDust,
+  spawnMultiShot,
+  spawnPlayerFireball,
+  spawnPyroblast,
   spawnSkillDust,
   spendRage,
+  stepBlizzards,
+  stepHunterTraps,
+  stepManaShield,
+  stepMissileBurst,
   stepPopups,
   stepRage,
+  stepRapidFire,
+  stepRogueTimers,
+  stepWarriorBuffs,
 } from './combat';
 import { stepDummies } from './dummy-ai';
-import { toggleInventory, usePotion } from './inventory';
+import { applyDeathDurabilityLoss } from './gear-durability';
+import { toggleInventory, usePotion, applyGearStats } from './inventory';
 import {
   equippedLegendaryEffect,
   legendaryBashCost,
@@ -23,13 +53,27 @@ import {
   toggleCatalog,
 } from './legendary';
 import { toggleCharacter } from './attributes';
-import { toggleSkills } from './skills';
-import { stepLoot, stepLootFlies } from './loot';
+import { isSkillId, skillLevelOf, type SkillId, toggleSkills } from './skills';
+import { applyDeathLootLoss, stepLoot, stepLootFlies } from './loot';
 import { closeCamp, syncCampProximity, syncHubPortalProximity, tryOpenCamp, tryOpenHubPortal } from './camp';
 import { closeAllPanels, isAnyPanelOpen } from './ui-panels';
 import { hitboxOverlaps, moveAndCollide } from './physics';
 import { chooseRespawn, syncBannerCheckpoint } from './respawn';
-import { bashCooldownOf, slamCooldownOf } from './specialization';
+import { stepFallWarn } from './fall-warn';
+import {
+  bashCooldownOf,
+  blinkCooldownOf,
+  disengageCooldownOf,
+  poisonBladeCooldownOf,
+  rapidFireMoveMult,
+  shadowStrikeCooldownOf,
+  slamCooldownOf,
+  sprintCooldownOf,
+  trapCooldownOf,
+  explosiveTrapCooldownOf,
+  vanishCooldownOf,
+  chargeCooldownOf,
+} from './specialization';
 import { syncSecretProximity, tryClaimSecret } from './secrets';
 import { tryHitBreakables } from './breakables';
 import { advanceTutorial, maybeGuidePoints } from './tutorial';
@@ -49,6 +93,8 @@ function toggleSettings(world: World): void {
     world.catalogOpen = false;
     world.campOpen = null;
     world.specPickOpen = false;
+    world.specNodePickTier = null;
+    world.levelUpOpen = false;
     sfx.play('ui');
   }
 }
@@ -61,14 +107,25 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
 
   stepPopups(world, dt);
   stepLootFlies(world, dt);
-  stepRage(player, dt);
+  stepRage(world, dt);
+  stepHunterTraps(world, dt);
+  stepBlizzards(world, dt);
+  stepRogueTimers(world, dt);
+  stepRapidFire(world, dt);
+  stepManaShield(world, dt);
+  stepWarriorBuffs(world, dt);
   player.rollCd = Math.max(0, player.rollCd - dt);
-  player.attackCd = Math.max(0, player.attackCd - dt);
-  player.slamCd = Math.max(0, player.slamCd - dt);
-  player.bashCd = Math.max(0, player.bashCd - dt);
+  const sliceHaste = player.sliceT > 0 ? PLAYER.sliceAndDiceAtkHaste : 1;
+  player.attackCd = Math.max(0, player.attackCd - dt * sliceHaste);
+  player.slamCd = Math.max(0, player.slamCd - dt * sliceHaste);
+  player.bashCd = Math.max(0, player.bashCd - dt * sliceHaste);
+  player.skillCd2 = Math.max(0, player.skillCd2 - dt * sliceHaste);
+  player.skillCd3 = Math.max(0, player.skillCd3 - dt * sliceHaste);
+  stepMissileBurst(world, dt);
   player.rageWarnT = Math.max(0, player.rageWarnT - dt);
   player.iFrame = Math.max(0, player.iFrame - dt);
   player.drinkT = Math.max(0, player.drinkT - dt);
+  player.potionCd = Math.max(0, player.potionCd - dt);
   player.slowT = Math.max(0, player.slowT - dt);
   player.petrifyT = Math.max(0, player.petrifyT - dt);
   player.coyote = player.onGround ? PLAYER.coyoteTime : Math.max(0, player.coyote - dt);
@@ -83,7 +140,12 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
     return;
   }
 
-  if (input.escapePressed && closeAllPanels(world)) {
+  if (input.escapePressed) {
+    if (closeAllPanels(world)) {
+      stepLoot(world, false);
+      return;
+    }
+    toggleSettings(world);
     stepLoot(world, false);
     return;
   }
@@ -131,16 +193,23 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
     player.vy = Math.max(player.vy, -PLAYER.maxFall);
     moveAndCollide(player, world.platforms, dt);
     if (player.y < -2.8) {
-      killByFall(player);
+      killByFall(world);
     }
     stepLoot(world, false);
     syncBannerCheckpoint(world);
+    stepFallWarn(world, dt);
     stepDummies(world, dt);
     return;
   }
 
   const jumped = tryJump(player);
   const slowMult = player.petrifyT > 0 ? 0.22 : player.slowT > 0 ? 0.48 : 1;
+  const sprintMult = player.sprintT > 0 ? PLAYER.sprintSpeedMult : 1;
+  const rapidMult = rapidFireMoveMult(world);
+  const shoutMult =
+    player.warShoutT > 0 && skillLevelOf(world, 'battle-shout') >= 3
+      ? PLAYER.battleShoutMove
+      : 1;
   if (player.rollT > 0 && !jumped) {
     player.rollT -= dt;
     player.vx = PLAYER.rollSpeed * slowMult * player.facing;
@@ -154,10 +223,11 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
     }
     noteLand(world, player, wasGrounded);
     if (player.y < -2.8) {
-      killByFall(player);
+      killByFall(world);
     }
     stepLoot(world, false);
     syncBannerCheckpoint(world);
+    stepFallWarn(world, dt);
     stepDummies(world, dt);
     return;
   }
@@ -171,6 +241,7 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
     noteLand(world, player, wasGrounded);
     stepLoot(world, false);
     syncBannerCheckpoint(world);
+    stepFallWarn(world, dt);
     stepDummies(world, dt);
     return;
   }
@@ -197,10 +268,20 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
     const swing = 1 - player.attackT / attackDurationOf(player.attackKind);
     const inSwing = swing > 0.32 && swing < 0.72;
     player.attackT -= dt;
+    if (player.attackKind === 'pyroblast' && player.skillShotArmed && swing > 0.55) {
+      spawnPyroblast(world);
+      player.skillShotArmed = false;
+    }
     if (player.attackKind === 'slam') {
       player.vx = player.facing * (swing < 0.55 ? 5.2 : 2.4);
     } else if (player.attackKind === 'bash') {
       player.vx = player.facing * (swing < 0.5 ? 8.4 : 3.2);
+    } else if (
+      player.attackKind === 'whirlwind' &&
+      skillLevelOf(world, 'whirlwind') >= 3 &&
+      input.moveX !== 0
+    ) {
+      player.vx = PLAYER.moveSpeed * 0.45 * input.moveX;
     } else {
       player.vx *= 0.82;
     }
@@ -216,10 +297,11 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
     }
     noteLand(world, player, wasGrounded);
     if (player.y < -2.8) {
-      killByFall(player);
+      killByFall(world);
     }
     stepLoot(world, false);
     syncBannerCheckpoint(world);
+    stepFallWarn(world, dt);
     stepDummies(world, dt);
     return;
   }
@@ -244,7 +326,16 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
   }
 
   if (!jumped && input.potionPressed) {
-    if (usePotion(world)) {
+    if (usePotion(world, undefined, 'life')) {
+      spawnDust(world, player.x, player.y + 0.25);
+      stepLoot(world, false);
+      stepDummies(world, dt);
+      return;
+    }
+  }
+
+  if (!jumped && input.manaPotionPressed) {
+    if (usePotion(world, undefined, 'mana')) {
       spawnDust(world, player.x, player.y + 0.25);
       stepLoot(world, false);
       stepDummies(world, dt);
@@ -254,7 +345,7 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
 
   if (input.moveX !== 0) {
     player.facing = input.moveX > 0 ? 1 : -1;
-    player.vx = PLAYER.moveSpeed * slowMult * input.moveX;
+    player.vx = PLAYER.moveSpeed * slowMult * sprintMult * rapidMult * shoutMult * input.moveX;
     advanceTutorial(world, 'move');
   } else {
     player.vx = 0;
@@ -278,7 +369,7 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
   noteLand(world, player, wasGrounded);
   noteStep(player, dt);
   if (player.y < -2.8) {
-    killByFall(player);
+    killByFall(world);
   }
 
   syncCampProximity(world);
@@ -298,6 +389,7 @@ export function stepPlayer(world: World, input: InputFrame, dt: number): void {
     stepLoot(world, false);
   }
   syncBannerCheckpoint(world);
+  stepFallWarn(world, dt);
   maybeGuidePoints(world);
   stepDummies(world, dt);
 }
@@ -311,7 +403,18 @@ function stepDead(world: World, player: Player, input: InputFrame, dt: number): 
   player.vy -= PLAYER.gravity * dt;
   player.vy = Math.max(player.vy, -PLAYER.maxFall);
   moveAndCollide(player, world.platforms, dt);
+  // 坠落死亡时夹住高度，避免镜头掉进虚空
+  if (player.y < -0.85) {
+    player.y = -0.85;
+    player.prevY = -0.85;
+    player.vy = 0;
+  }
   if (input.respawnBannerPressed) {
+    if (!player.hasBanner) {
+      world.levelToastT = 1.4;
+      world.levelToastText = '尚未激活旗帜 · 请回营复活';
+      return;
+    }
     chooseRespawn(world, 'banner');
   } else if (input.respawnCampPressed) {
     chooseRespawn(world, 'camp');
@@ -333,20 +436,79 @@ function tryJump(player: Player): boolean {
   return true;
 }
 
+function slotPressed(input: InputFrame, slot: number): boolean {
+  if (slot === 0) {
+    return input.slamPressed;
+  }
+  if (slot === 1) {
+    return input.bashPressed;
+  }
+  if (slot === 2) {
+    return input.skill3Pressed;
+  }
+  return input.skill4Pressed;
+}
+
+function getSlotCd(player: Player, slot: number): number {
+  if (slot === 0) {
+    return player.slamCd;
+  }
+  if (slot === 1) {
+    return player.bashCd;
+  }
+  if (slot === 2) {
+    return player.skillCd2;
+  }
+  return player.skillCd3;
+}
+
+function setSlotCd(player: Player, slot: number, value: number): void {
+  if (slot === 0) {
+    player.slamCd = value;
+  } else if (slot === 1) {
+    player.bashCd = value;
+  } else if (slot === 2) {
+    player.skillCd2 = value;
+  } else {
+    player.skillCd3 = value;
+  }
+}
+
 function tryStartSkill(
   world: World,
   player: Player,
   input: InputFrame,
   allowBasic: boolean,
 ): boolean {
-  if (input.slamPressed && player.slamCd <= 0) {
-    beginAttack(world, player, 'slam');
+  for (let slot = 0; slot < 4; slot += 1) {
+    if (!slotPressed(input, slot)) {
+      continue;
+    }
+    if (tryCastBarSlot(world, player, slot)) {
+      return true;
+    }
+  }
+  if (allowBasic && input.attackPressed && player.attackCd <= 0) {
+    beginAttack(world, player, 'basic', -1);
     return true;
   }
-  if (input.bashPressed) {
-    if (player.bashCd > 0) {
-      return false;
-    }
+  return false;
+}
+
+function tryCastBarSlot(world: World, player: Player, slot: number): boolean {
+  const raw = world.skillBar[slot];
+  if (!raw || !isSkillId(raw) || skillLevelOf(world, raw) <= 0) {
+    return false;
+  }
+  if (getSlotCd(player, slot) > 0) {
+    return false;
+  }
+  const id: SkillId = raw;
+  if (id === 'slam') {
+    beginAttack(world, player, 'slam', slot);
+    return true;
+  }
+  if (id === 'bash') {
     if (!spendRage(player, legendaryBashCost(world))) {
       player.rageWarnT = 0.8;
       world.levelToastT = 1.2;
@@ -354,23 +516,299 @@ function tryStartSkill(
       sfx.play('deny');
       return false;
     }
-    beginAttack(world, player, 'bash');
+    beginAttack(world, player, 'bash', slot);
     return true;
   }
-  if (allowBasic && input.attackPressed && player.attackCd <= 0) {
-    beginAttack(world, player, 'basic');
+  if (id === 'fireball') {
+    if (!spendRage(player, PLAYER.fireballCost)) {
+      denyMana(world, player, '火球');
+      return false;
+    }
+    beginAttack(world, player, 'fireball', slot);
     return true;
   }
+  if (id === 'frost-nova') {
+    if (!spendRage(player, PLAYER.frostNovaCost)) {
+      denyMana(world, player, '冰霜新星');
+      return false;
+    }
+    beginAttack(world, player, 'frost-nova', slot);
+    return true;
+  }
+  if (id === 'arcane-missiles') {
+    if (!spendRage(player, PLAYER.arcaneMissilesCost)) {
+      denyMana(world, player, '奥术飞弹');
+      return false;
+    }
+    beginAttack(world, player, 'arcane-missiles', slot);
+    return true;
+  }
+  if (id === 'blink') {
+    if (!spendRage(player, PLAYER.blinkCost)) {
+      denyResource(world, player, '闪现');
+      return false;
+    }
+    beginAttack(world, player, 'blink', slot);
+    return true;
+  }
+  if (id === 'aimed-shot') {
+    if (!spendRage(player, PLAYER.aimedShotCost)) {
+      denyResource(world, player, '瞄准射击');
+      return false;
+    }
+    beginAttack(world, player, 'aimed-shot', slot);
+    return true;
+  }
+  if (id === 'disengage') {
+    if (!spendRage(player, PLAYER.disengageCost)) {
+      denyResource(world, player, '后跳射击');
+      return false;
+    }
+    beginAttack(world, player, 'disengage', slot);
+    return true;
+  }
+  if (id === 'multi-shot') {
+    if (!spendRage(player, PLAYER.multiShotCost)) {
+      denyResource(world, player, '多重射击');
+      return false;
+    }
+    beginAttack(world, player, 'multi-shot', slot);
+    return true;
+  }
+  if (id === 'trap') {
+    if (!spendRage(player, PLAYER.trapCost)) {
+      denyResource(world, player, '捕兽夹');
+      return false;
+    }
+    beginAttack(world, player, 'trap', slot);
+    return true;
+  }
+  if (id === 'shadow-strike') {
+    if (!spendRage(player, PLAYER.shadowStrikeCost)) {
+      denyResource(world, player, '影袭');
+      return false;
+    }
+    beginAttack(world, player, 'shadow-strike', slot);
+    return true;
+  }
+  if (id === 'eviscerate') {
+    if (player.comboPoints <= 0) {
+      world.levelToastT = 1.2;
+      world.levelToastText = '需要连击点才能刺骨';
+      sfx.play('deny');
+      return false;
+    }
+    if (!spendRage(player, PLAYER.eviscerateCost)) {
+      denyResource(world, player, '刺骨');
+      return false;
+    }
+    beginAttack(world, player, 'eviscerate', slot);
+    return true;
+  }
+  if (id === 'poison-blade') {
+    if (!spendRage(player, PLAYER.poisonBladeCost)) {
+      denyResource(world, player, '毒刃');
+      return false;
+    }
+    beginAttack(world, player, 'poison-blade', slot);
+    return true;
+  }
+  if (id === 'sprint') {
+    if (!spendRage(player, PLAYER.sprintCost)) {
+      denyResource(world, player, '疾跑');
+      return false;
+    }
+    beginAttack(world, player, 'sprint', slot);
+    return true;
+  }
+  if (id === 'vanish') {
+    if (!spendRage(player, PLAYER.vanishCost)) {
+      denyResource(world, player, '消失');
+      return false;
+    }
+    beginAttack(world, player, 'vanish', slot);
+    return true;
+  }
+  if (id === 'blizzard') {
+    if (!spendRage(player, PLAYER.blizzardCost)) {
+      denyResource(world, player, '暴风雪');
+      return false;
+    }
+    beginAttack(world, player, 'blizzard', slot);
+    return true;
+  }
+  if (id === 'rapid-fire') {
+    if (!spendRage(player, PLAYER.rapidFireCost)) {
+      denyResource(world, player, '急速射击');
+      return false;
+    }
+    beginAttack(world, player, 'rapid-fire', slot);
+    return true;
+  }
+  if (id === 'pyroblast') {
+    if (!spendRage(player, PLAYER.pyroblastCost)) {
+      denyResource(world, player, '炎爆术');
+      return false;
+    }
+    beginAttack(world, player, 'pyroblast', slot);
+    return true;
+  }
+  if (id === 'explosive-trap') {
+    if (!spendRage(player, PLAYER.explosiveTrapCost)) {
+      denyResource(world, player, '爆炸陷阱');
+      return false;
+    }
+    beginAttack(world, player, 'explosive-trap', slot);
+    return true;
+  }
+  if (id === 'ice-lance') {
+    if (!spendRage(player, PLAYER.iceLanceCost)) {
+      denyResource(world, player, '冰枪术');
+      return false;
+    }
+    beginAttack(world, player, 'ice-lance', slot);
+    return true;
+  }
+  if (id === 'concussive-shot') {
+    if (!spendRage(player, PLAYER.concussiveCost)) {
+      denyResource(world, player, '震荡射击');
+      return false;
+    }
+    beginAttack(world, player, 'concussive-shot', slot);
+    return true;
+  }
+  if (id === 'mana-shield') {
+    if (!player.manaShieldOn && !spendRage(player, PLAYER.manaShieldCost)) {
+      denyResource(world, player, '法力护盾');
+      return false;
+    }
+    beginAttack(world, player, 'mana-shield', slot);
+    return true;
+  }
+  if (id === 'serpent-sting') {
+    if (!spendRage(player, PLAYER.serpentStingCost)) {
+      denyResource(world, player, '毒箭');
+      return false;
+    }
+    beginAttack(world, player, 'serpent-sting', slot);
+    return true;
+  }
+  if (id === 'charge') {
+    if (!spendRage(player, PLAYER.chargeCost)) {
+      denyResource(world, player, '冲锋');
+      return false;
+    }
+    beginAttack(world, player, 'charge', slot);
+    return true;
+  }
+  if (id === 'whirlwind') {
+    if (!spendRage(player, PLAYER.whirlwindCost)) {
+      denyResource(world, player, '旋风斩');
+      return false;
+    }
+    beginAttack(world, player, 'whirlwind', slot);
+    return true;
+  }
+  if (id === 'execute') {
+    if (!spendRage(player, PLAYER.executeCost)) {
+      denyResource(world, player, '斩杀');
+      return false;
+    }
+    beginAttack(world, player, 'execute', slot);
+    return true;
+  }
+  if (id === 'battle-shout') {
+    if (!spendRage(player, PLAYER.battleShoutCost)) {
+      denyResource(world, player, '战吼');
+      return false;
+    }
+    beginAttack(world, player, 'battle-shout', slot);
+    return true;
+  }
+  if (id === 'sunder') {
+    if (!spendRage(player, PLAYER.sunderCost)) {
+      denyResource(world, player, '破甲斩');
+      return false;
+    }
+    beginAttack(world, player, 'sunder', slot);
+    return true;
+  }
+  if (id === 'cleave') {
+    if (!spendRage(player, PLAYER.cleaveCost)) {
+      denyResource(world, player, '顺劈');
+      return false;
+    }
+    beginAttack(world, player, 'cleave', slot);
+    return true;
+  }
+  if (id === 'kidney-shot') {
+    if (player.comboPoints <= 0) {
+      world.levelToastT = 1.2;
+      world.levelToastText = '需要连击点才能肾击';
+      sfx.play('deny');
+      return false;
+    }
+    if (!spendRage(player, PLAYER.kidneyShotCost)) {
+      denyResource(world, player, '肾击');
+      return false;
+    }
+    beginAttack(world, player, 'kidney-shot', slot);
+    return true;
+  }
+  if (id === 'slice-and-dice') {
+    if (player.comboPoints <= 0) {
+      world.levelToastT = 1.2;
+      world.levelToastText = '需要连击点才能切割';
+      sfx.play('deny');
+      return false;
+    }
+    if (!spendRage(player, PLAYER.sliceAndDiceCost)) {
+      denyResource(world, player, '切割');
+      return false;
+    }
+    beginAttack(world, player, 'slice-and-dice', slot);
+    return true;
+  }
+  if (id === 'fan-of-knives') {
+    if (!spendRage(player, PLAYER.fanOfKnivesCost)) {
+      denyResource(world, player, '刀扇');
+      return false;
+    }
+    beginAttack(world, player, 'fan-of-knives', slot);
+    return true;
+  }
+  world.levelToastT = 1.2;
+  world.levelToastText = '该技能即将开放';
+  sfx.play('deny');
   return false;
 }
 
-function beginAttack(world: World, player: Player, kind: AttackKind): void {
+function denyResource(world: World, player: Player, name: string): void {
+  player.rageWarnT = 0.8;
+  world.levelToastT = 1.2;
+  const label =
+    player.classId === 'mage'
+      ? '法力'
+      : player.classId === 'hunter'
+        ? '集中'
+        : player.classId === 'rogue'
+          ? '能量'
+          : '怒气';
+  world.levelToastText = `${label}不足，无法施放${name}`;
+  sfx.play('deny');
+}
+
+function denyMana(world: World, player: Player, name: string): void {
+  denyResource(world, player, name);
+}
+
+function beginAttack(world: World, player: Player, kind: AttackKind, slot: number): void {
   player.attackKind = kind;
   player.attackT = attackDurationOf(kind);
   player.state = 'attack';
   advanceTutorial(world, 'attack');
   if (kind === 'slam') {
-    player.slamCd = slamCooldownOf(world) * legendarySlamCooldownMult(world);
+    setSlotCd(player, slot >= 0 ? slot : 0, slamCooldownOf(world) * legendarySlamCooldownMult(world));
     player.vx = player.facing * legendarySlamDash(world);
     if (player.onGround) {
       player.vy = 2.4;
@@ -383,20 +821,203 @@ function beginAttack(world: World, player: Player, kind: AttackKind): void {
     spawnSkillDust(world, player, kind);
     sfx.play('slam');
   } else if (kind === 'bash') {
-    player.bashCd = bashCooldownOf(world);
+    setSlotCd(player, slot >= 0 ? slot : 1, bashCooldownOf(world));
     player.vx = player.facing * legendaryBashDash(world);
     player.iFrame = Math.max(player.iFrame, legendaryBashIFrame(world));
     world.shake = Math.max(world.shake, 0.55);
     spawnSkillDust(world, player, kind);
     sfx.play('bash');
+  } else if (kind === 'fireball') {
+    setSlotCd(player, slot >= 0 ? slot : 0, PLAYER.fireballCooldown);
+    spawnPlayerFireball(world);
+    spawnSkillDust(world, player, kind);
+    sfx.play('slam');
+  } else if (kind === 'frost-nova') {
+    setSlotCd(player, slot >= 0 ? slot : 1, PLAYER.frostNovaCooldown);
+    applyFrostNova(world);
+    spawnSkillDust(world, player, kind);
+    sfx.play('bash');
+  } else if (kind === 'arcane-missiles') {
+    setSlotCd(player, slot >= 0 ? slot : 2, PLAYER.arcaneMissilesCooldown);
+    beginArcaneMissiles(world);
+    spawnSkillDust(world, player, kind);
+    sfx.play('slam');
+  } else if (kind === 'blink') {
+    setSlotCd(player, slot >= 0 ? slot : 3, blinkCooldownOf(world));
+    blinkPlayer(world, player);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'aimed-shot') {
+    setSlotCd(player, slot >= 0 ? slot : 0, PLAYER.aimedShotCooldown);
+    spawnHunterArrow(world, 'aimed-shot');
+    spawnSkillDust(world, player, kind);
+    sfx.play('slam');
+  } else if (kind === 'disengage') {
+    setSlotCd(player, slot >= 0 ? slot : 1, disengageCooldownOf(world));
+    disengagePlayer(world, player);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'multi-shot') {
+    setSlotCd(player, slot >= 0 ? slot : 2, PLAYER.multiShotCooldown);
+    spawnMultiShot(world);
+    spawnSkillDust(world, player, kind);
+    sfx.play('slam');
+  } else if (kind === 'trap') {
+    setSlotCd(player, slot >= 0 ? slot : 3, trapCooldownOf(world));
+    placeHunterTrap(world);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'shadow-strike') {
+    setSlotCd(player, slot >= 0 ? slot : 0, shadowStrikeCooldownOf(world));
+    player.vx = player.facing * 3.2;
+    spawnSkillDust(world, player, kind);
+    sfx.play('slam');
+  } else if (kind === 'eviscerate') {
+    setSlotCd(player, slot >= 0 ? slot : 1, PLAYER.eviscerateCooldown);
+    player.vx = player.facing * 2.4;
+    spawnSkillDust(world, player, kind);
+    sfx.play('bash');
+  } else if (kind === 'poison-blade') {
+    setSlotCd(player, slot >= 0 ? slot : 2, poisonBladeCooldownOf(world));
+    player.vx = player.facing * 2.8;
+    spawnSkillDust(world, player, kind);
+    sfx.play('hit');
+  } else if (kind === 'sprint') {
+    setSlotCd(player, slot >= 0 ? slot : 3, sprintCooldownOf(world));
+    activateSprint(world);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'vanish') {
+    setSlotCd(player, slot >= 0 ? slot : 3, vanishCooldownOf(world));
+    activateVanish(world);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'blizzard') {
+    setSlotCd(player, slot >= 0 ? slot : 2, PLAYER.blizzardCooldown);
+    placeBlizzard(world);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'rapid-fire') {
+    setSlotCd(player, slot >= 0 ? slot : 2, PLAYER.rapidFireCooldown);
+    activateRapidFire(world);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'pyroblast') {
+    setSlotCd(player, slot >= 0 ? slot : 3, PLAYER.pyroblastCooldown);
+    player.skillShotArmed = true;
+    spawnSkillDust(world, player, kind);
+    sfx.play('slam');
+  } else if (kind === 'explosive-trap') {
+    setSlotCd(player, slot >= 0 ? slot : 3, explosiveTrapCooldownOf(world));
+    placeExplosiveTrap(world);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'ice-lance') {
+    setSlotCd(player, slot >= 0 ? slot : 2, PLAYER.iceLanceCooldown);
+    spawnIceLance(world);
+    spawnSkillDust(world, player, kind);
+    sfx.play('slam');
+  } else if (kind === 'concussive-shot') {
+    setSlotCd(player, slot >= 0 ? slot : 3, PLAYER.concussiveCooldown);
+    spawnHunterArrow(world, 'concussive-shot');
+    spawnSkillDust(world, player, kind);
+    sfx.play('slam');
+  } else if (kind === 'mana-shield') {
+    setSlotCd(player, slot >= 0 ? slot : 3, PLAYER.manaShieldCooldown);
+    activateManaShield(world);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'serpent-sting') {
+    setSlotCd(player, slot >= 0 ? slot : 3, PLAYER.serpentStingCooldown);
+    spawnHunterArrow(world, 'serpent-sting');
+    spawnSkillDust(world, player, kind);
+    sfx.play('slam');
+  } else if (kind === 'charge') {
+    setSlotCd(player, slot >= 0 ? slot : 2, chargeCooldownOf(world));
+    chargePlayer(world);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'whirlwind') {
+    setSlotCd(player, slot >= 0 ? slot : 3, PLAYER.whirlwindCooldown);
+    applyWhirlwind(world);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'battle-shout') {
+    setSlotCd(player, slot >= 0 ? slot : 2, PLAYER.battleShoutCooldown);
+    activateBattleShout(world);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'execute') {
+    setSlotCd(player, slot >= 0 ? slot : 2, PLAYER.executeCooldown);
+    player.vx = player.facing * 4.2;
+    spawnSkillDust(world, player, kind);
+    sfx.play('slam');
+  } else if (kind === 'sunder') {
+    setSlotCd(player, slot >= 0 ? slot : 3, PLAYER.sunderCooldown);
+    player.vx = player.facing * 3.6;
+    spawnSkillDust(world, player, kind);
+    sfx.play('bash');
+  } else if (kind === 'cleave') {
+    setSlotCd(player, slot >= 0 ? slot : 3, PLAYER.cleaveCooldown);
+    player.vx = player.facing * 3.8;
+    spawnSkillDust(world, player, kind);
+    sfx.play('slam');
+  } else if (kind === 'kidney-shot') {
+    setSlotCd(player, slot >= 0 ? slot : 2, PLAYER.kidneyShotCooldown);
+    player.vx = player.facing * 3.5;
+    spawnSkillDust(world, player, kind);
+    sfx.play('bash');
+  } else if (kind === 'slice-and-dice') {
+    setSlotCd(player, slot >= 0 ? slot : 3, PLAYER.sliceAndDiceCooldown);
+    activateSliceAndDice(world);
+    spawnSkillDust(world, player, kind);
+  } else if (kind === 'fan-of-knives') {
+    setSlotCd(player, slot >= 0 ? slot : 3, PLAYER.fanOfKnivesCooldown);
+    applyFanOfKnives(world);
+    spawnSkillDust(world, player, kind);
   }
 }
 
 function tryHitDummies(world: World, player: Player): void {
   const kind = player.attackKind;
+  if (
+    kind === 'fireball' ||
+    kind === 'frost-nova' ||
+    kind === 'arcane-missiles' ||
+    kind === 'blink' ||
+    kind === 'aimed-shot' ||
+    kind === 'disengage' ||
+    kind === 'multi-shot' ||
+    kind === 'trap' ||
+    kind === 'sprint' ||
+    kind === 'vanish' ||
+    kind === 'blizzard' ||
+    kind === 'rapid-fire' ||
+    kind === 'pyroblast' ||
+    kind === 'explosive-trap' ||
+    kind === 'ice-lance' ||
+    kind === 'concussive-shot' ||
+    kind === 'mana-shield' ||
+    kind === 'serpent-sting' ||
+    kind === 'charge' ||
+    kind === 'whirlwind' ||
+    kind === 'battle-shout' ||
+    kind === 'slice-and-dice' ||
+    kind === 'fan-of-knives'
+  ) {
+    return;
+  }
+  if (kind === 'cleave') {
+    applyCleaveHits(world, player);
+    player.hitStop = Math.max(player.hitStop, 0.08);
+    return;
+  }
   const reach =
-    (kind === 'slam' ? PLAYER.slamReach : kind === 'bash' ? PLAYER.bashReach : 1.1) +
-    legendaryReachBonus(world, kind);
+    (kind === 'slam'
+      ? PLAYER.slamReach
+      : kind === 'bash'
+        ? PLAYER.bashReach
+        : kind === 'execute'
+          ? PLAYER.executeReach
+          : kind === 'sunder'
+            ? PLAYER.sunderReach
+            : kind === 'kidney-shot'
+              ? PLAYER.kidneyShotReach
+              : kind === 'shadow-strike'
+                ? PLAYER.shadowStrikeReach
+                : kind === 'eviscerate'
+                  ? PLAYER.eviscerateReach
+                  : kind === 'poison-blade'
+                    ? PLAYER.poisonBladeReach
+                    : 1.1) + legendaryReachBonus(world, kind);
   const hx = player.x + player.facing * (kind === 'bash' ? 0.7 : 0.85);
   const hy = player.y + 0.2;
   if (tryHitBreakables(world, hx, hy, reach, 1.15)) {
@@ -433,12 +1054,24 @@ function noteStep(player: Player, dt: number): void {
   sfx.play('step');
 }
 
-function killByFall(player: Player): void {
+function killByFall(world: World): void {
+  const player = world.player;
   if (player.hp > 0) {
     player.hp = 0;
     player.deadT = 0;
+    player.deathCause = 'fall';
     player.awaitRespawn = true;
     player.state = 'dead';
+    player.y = Math.max(player.y, -0.85);
+    player.prevY = player.y;
+    player.vy = 0;
+    player.fallWarnT = 0;
+    world.shake = Math.max(world.shake, 0.6);
+    world.levelToastT = 1.6;
+    world.levelToastText = '坠落身亡';
+    applyDeathDurabilityLoss(world);
+    applyDeathLootLoss(world);
+    applyGearStats(player, world);
     sfx.play('die');
   }
 }

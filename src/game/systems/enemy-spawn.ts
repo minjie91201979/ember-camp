@@ -69,6 +69,13 @@ export function createDummyFromSpawn(
     fuseT: 0,
     affixes: [],
     affixCd: 0,
+    poisonT: 0,
+    poisonDps: 0,
+    serpentT: 0,
+    serpentDps: 0,
+    serpentStacks: 0,
+    sunderStacks: 0,
+    sunderT: 0,
   };
   if (ng > 0) {
     dummy.hp = Math.round(dummy.hp * ngPlusEnemyHpMult(ng));
@@ -83,8 +90,22 @@ export function createDummyFromSpawn(
   return dummy;
 }
 
+/** 存活非 BOSS 数量（用于同屏上限）。 */
+export function countAliveAdds(world: World): number {
+  let n = 0;
+  for (const d of world.dummies) {
+    if (d.hp > 0 && !d.boss) {
+      n += 1;
+    }
+  }
+  return n;
+}
+
 /** 召唤词缀：放出虚弱无词缀分身。 */
 export function spawnEliteAffixAdd(world: World, parent: Dummy): void {
+  if (countAliveAdds(world) >= 20) {
+    return;
+  }
   const side = Math.random() < 0.5 ? -1 : 1;
   const add = createDummyFromSpawn(
     ++world.dummyId,

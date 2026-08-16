@@ -98,7 +98,7 @@ function glowMat(color: number, opacity: number): THREE.ShaderMaterial {
   });
 }
 
-export function createTeleport(tex: P0Textures, x = -4.4): TeleportView {
+export function createTeleport(tex: P0Textures, x = -5.6): TeleportView {
   const group = new THREE.Group();
   const runes = makeRuneMap();
   const stone = new THREE.MeshStandardMaterial({

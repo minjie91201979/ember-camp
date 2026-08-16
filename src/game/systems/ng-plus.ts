@@ -32,6 +32,7 @@ export function startNgPlus(world: World): boolean {
   world.ngPlusLevel += 1;
   world.bossKills = {};
   world.secretsClaimed = {};
+  world.offerNgPlusHint = false;
   closeCamp(world);
 
   const crestQty = Math.min(3, world.ngPlusLevel);
@@ -40,7 +41,7 @@ export function startNgPlus(world: World): boolean {
   const zone = ZONES[START_ZONE_ID];
   enterZone(world, START_ZONE_ID, zone?.spawns[0]?.x ?? 2.2, 1.15);
   world.levelToastT = 2.8;
-  world.levelToastText = `新周目 · NG+${world.ngPlusLevel}`;
+  world.levelToastText = `新周目 · NG+${world.ngPlusLevel} · 烬灰披风点亮`;
   sfx.play('levelup');
   return true;
 }

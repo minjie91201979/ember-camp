@@ -1,6 +1,6 @@
 import { sfx } from '../../audio/sfx';
 import type { Dummy, World } from '../types';
-import { applyEnemyHit, hurtPlayer } from './combat';
+import { applyEnemyHit, applyPlayerProjectileHit, hurtPlayer } from './combat';
 import { noteBossKill, spawnHazard } from './boss';
 import { onEliteDeath } from './elite-affixes';
 import { spawnKillLoot } from './loot';
@@ -46,7 +46,31 @@ export function stepProjectiles(world: World, dt: number): void {
   for (const shot of world.projectiles) {
     shot.age += dt;
     shot.x += shot.vx * dt;
+    if (typeof shot.vy === 'number') {
+      shot.y += shot.vy * dt;
+    }
     if (shot.age >= shot.life) {
+      continue;
+    }
+    if (shot.owner === 'player') {
+      let hit = false;
+      for (const dummy of world.dummies) {
+        if (dummy.hp <= 0) {
+          continue;
+        }
+        if (
+          Math.abs(shot.x - dummy.x) < shot.radius + dummy.w * 0.4 &&
+          Math.abs(shot.y - (dummy.y + dummy.h * 0.45)) < shot.radius + 0.55
+        ) {
+          applyPlayerProjectileHit(world, shot, dummy);
+          hit = true;
+          break;
+        }
+      }
+      if (hit) {
+        continue;
+      }
+      keep.push(shot);
       continue;
     }
     if (
@@ -286,6 +310,8 @@ function spawnSpit(world: World, dummy: Dummy): void {
     age: 0,
     life: 1.35,
     radius: 0.28,
+    owner: 'enemy',
+    visual: 'spit',
   });
 }
 

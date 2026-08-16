@@ -1,4 +1,5 @@
 import type { ItemDef, ItemQuality } from '../types';
+import { CLASS_GEAR_DEFS, WARRIOR_BASE_AFFINITY } from './class-gear';
 
 export const ITEM_DEFS: Record<string, ItemDef> = {
   'apprentice-sword': {
@@ -9,6 +10,33 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
     quality: 'common',
     ilvl: 1,
     weaponAtk: 8,
+  },
+  'apprentice-staff': {
+    id: 'apprentice-staff',
+    name: '学徒法杖',
+    kind: 'gear',
+    slot: 'mainhand',
+    quality: 'common',
+    ilvl: 1,
+    weaponAtk: 7,
+  },
+  'apprentice-bow': {
+    id: 'apprentice-bow',
+    name: '学徒短弓',
+    kind: 'gear',
+    slot: 'mainhand',
+    quality: 'common',
+    ilvl: 1,
+    weaponAtk: 7,
+  },
+  'apprentice-daggers': {
+    id: 'apprentice-daggers',
+    name: '学徒匕首',
+    kind: 'gear',
+    slot: 'mainhand',
+    quality: 'common',
+    ilvl: 1,
+    weaponAtk: 7,
   },
   'mist-blade': {
     id: 'mist-blade',
@@ -43,6 +71,14 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
     ilvl: 1,
     heal: 80,
   },
+  'mana-potion-minor': {
+    id: 'mana-potion-minor',
+    name: '初级法力药水',
+    kind: 'potion',
+    quality: 'common',
+    ilvl: 1,
+    mana: 50,
+  },
   'life-potion-mid': {
     id: 'life-potion-mid',
     name: '中级生命药水',
@@ -51,6 +87,14 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
     ilvl: 20,
     heal: 160,
   },
+  'mana-potion-mid': {
+    id: 'mana-potion-mid',
+    name: '中级法力药水',
+    kind: 'potion',
+    quality: 'uncommon',
+    ilvl: 20,
+    mana: 150,
+  },
   'life-potion-greater': {
     id: 'life-potion-greater',
     name: '高级生命药水',
@@ -58,6 +102,37 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
     quality: 'rare',
     ilvl: 40,
     heal: 280,
+  },
+  'mana-potion-greater': {
+    id: 'mana-potion-greater',
+    name: '高级法力药水',
+    kind: 'potion',
+    quality: 'rare',
+    ilvl: 40,
+    mana: 350,
+  },
+  'life-potion-ultra': {
+    id: 'life-potion-ultra',
+    name: '特级生命药水',
+    kind: 'potion',
+    quality: 'epic',
+    ilvl: 55,
+    heal: 1200,
+  },
+  'mana-potion-ultra': {
+    id: 'mana-potion-ultra',
+    name: '特级法力药水',
+    kind: 'potion',
+    quality: 'epic',
+    ilvl: 55,
+    mana: 700,
+  },
+  'magic-dust': {
+    id: 'magic-dust',
+    name: '魔法尘',
+    kind: 'material',
+    quality: 'rare',
+    ilvl: 10,
   },
   'rotwood-essence': {
     id: 'rotwood-essence',
@@ -458,6 +533,39 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
     legendaryEffect: 'rift-edge',
     effectDesc: '斩杀：目标低血时伤害暴增，暴击伤害提高',
   },
+  'cinder-staff': {
+    id: 'cinder-staff',
+    name: '烬心法杖',
+    kind: 'gear',
+    slot: 'mainhand',
+    quality: 'legendary',
+    ilvl: 25,
+    weaponAtk: 30,
+    legendaryEffect: 'cinder-staff',
+    effectDesc: '火球：爆炸半径约 +30%，伤害约 +18%',
+  },
+  'venom-longbow': {
+    id: 'venom-longbow',
+    name: '毒涎长弓',
+    kind: 'gear',
+    slot: 'mainhand',
+    quality: 'legendary',
+    ilvl: 40,
+    weaponAtk: 46,
+    legendaryEffect: 'venom-longbow',
+    effectDesc: '毒箭：DoT 更强；爆炸陷阱爆炸半径约 +20%',
+  },
+  'nightshade-fang': {
+    id: 'nightshade-fang',
+    name: '夜影毒牙',
+    kind: 'gear',
+    slot: 'mainhand',
+    quality: 'legendary',
+    ilvl: 55,
+    weaponAtk: 58,
+    legendaryEffect: 'nightshade-fang',
+    effectDesc: '消失：冷却约 −20%；肾击：眩晕时长约 +25%',
+  },
   /** 各区秘密探索遗物（营地高价出售；非战斗掉落） */
   'relic-mist-veil': {
     id: 'relic-mist-veil',
@@ -556,6 +664,419 @@ export const ITEM_DEFS: Record<string, ItemDef> = {
     effectDesc: '探索遗物：终焉王座秘密，可在营地高价出售',
   },
 };
+
+type ItemLore = {
+  weaponType?: string;
+  flavor?: string;
+  traits?: string[];
+  effectDesc?: string;
+};
+
+const ITEM_LORE: Record<string, ItemLore> = {
+  'apprentice-sword': {
+    weaponType: '长剑',
+    flavor: '烬营训练场的制式长剑，刃口尚新。',
+    traits: ['近战', '新手友好'],
+  },
+  'apprentice-staff': {
+    weaponType: '法杖',
+    flavor: '学徒法师的入门木杖，顶端嵌着淡青晶石。',
+    traits: ['法术聚焦', '新手友好'],
+  },
+  'apprentice-bow': {
+    weaponType: '短弓',
+    flavor: '营地猎手改短的练习弓，弦声清脆。',
+    traits: ['远程', '新手友好'],
+  },
+  'apprentice-daggers': {
+    weaponType: '双匕',
+    flavor: '训练用薄刃，出鞘时几乎无声。',
+    traits: ['近战', '迅捷', '新手友好'],
+  },
+  'mist-blade': {
+    weaponType: '短刃',
+    flavor: '雾林猎人常用的短刃，挥舞时带出湿冷雾气。',
+    traits: ['近战', '迅捷'],
+  },
+  'grove-cleaver': {
+    weaponType: '劈斧',
+    flavor: '砍伐腐木的重斧，斧面刻着林地符纹。',
+    traits: ['近战', '破甲'],
+  },
+  'woodland-scrap': {
+    flavor: '林地随处可见的碎材，铁匠可用来加固武器。',
+    traits: ['强化材料'],
+  },
+  'life-potion-minor': {
+    flavor: '营地药剂师熬制的红液，入口微苦。',
+    traits: ['消耗品', '应急'],
+  },
+  'mana-potion-minor': {
+    flavor: '蓝晶粉末兑清水而成，回蓝迅速。',
+    traits: ['消耗品', '法力'],
+  },
+  'life-potion-mid': {
+    flavor: '浓缩生命精华，适合中期征途。',
+    traits: ['消耗品', '强效回复'],
+  },
+  'mana-potion-mid': {
+    flavor: '浓缩蓝晶浆，中期施法续航。',
+    traits: ['消耗品', '法力', '强效回复'],
+  },
+  'life-potion-greater': {
+    flavor: '高级军用药水，瓶身封印着暖光。',
+    traits: ['消耗品', '强效回复'],
+  },
+  'mana-potion-greater': {
+    flavor: '高阶法师常备的深蓝药液，冷冽入喉。',
+    traits: ['消耗品', '法力', '强效回复'],
+  },
+  'life-potion-ultra': {
+    flavor: '烬营秘方封存的赤金药液，濒死也能拉回一线。',
+    traits: ['消耗品', '特级回复'],
+  },
+  'mana-potion-ultra': {
+    flavor: '终焉余烬淬炼的虚空蓝晶，一口气灌满法力池。',
+    traits: ['消耗品', '法力', '特级回复'],
+  },
+  'magic-dust': {
+    flavor: '分解精良以上装备析出的细尘，铁匠用以加固。',
+    traits: ['强化材料', '分解'],
+  },
+  'rotwood-essence': {
+    flavor: '腐木首领残留的精华，异香刺鼻。',
+    traits: ['稀有材料', '强化'],
+  },
+  'quarry-ore': {
+    flavor: '荒石矿坑的粗矿，敲打后可嵌入刃脊。',
+    traits: ['强化材料'],
+  },
+  'iron-pick-blade': {
+    weaponType: '镐刃',
+    flavor: '矿工改锻的镐刃武器，沉重但耐用。',
+    traits: ['近战', '凿击'],
+  },
+  'slate-cleaver': {
+    weaponType: '劈斧',
+    flavor: '板岩打造的阔斧，挥动时有石屑飞溅感。',
+    traits: ['近战', '破甲'],
+  },
+  'warden-core': {
+    flavor: '矿坑监工体内的岩核，仍有余温。',
+    traits: ['稀有材料', '强化'],
+  },
+  'driftwood-scrap': {
+    flavor: '被潮水磨圆的浮木，晒干后可作柄材。',
+    traits: ['强化材料'],
+  },
+  'coral-blade': {
+    weaponType: '短刃',
+    flavor: '珊瑚磨成的锯齿短刃，触感冰凉。',
+    traits: ['近战', '锐利'],
+  },
+  'brine-cleaver': {
+    weaponType: '劈斧',
+    flavor: '咸潮锈蚀的重斧，挥砍带出海腥味。',
+    traits: ['近战', '破甲'],
+  },
+  'tide-pearl': {
+    flavor: '巨蟹吐出的珍珠，内部隐约有潮汐声。',
+    traits: ['稀有材料', '强化'],
+  },
+  'cinder-shard': {
+    flavor: '焦土地表剥落的烬片，烫手。',
+    traits: ['强化材料'],
+  },
+  'ember-fang': {
+    weaponType: '利齿刃',
+    flavor: '烬蜥牙齿打磨成的弯刃，余烬未熄。',
+    traits: ['近战', '灼热'],
+  },
+  'ashen-cleaver': {
+    weaponType: '劈斧',
+    flavor: '灰烬覆盖的重斧，劈砍时扬起黑烟。',
+    traits: ['近战', '破甲', '灼热'],
+  },
+  'cinder-heart': {
+    flavor: '烬蜥心脏化石，按压仍有脉动热感。',
+    traits: ['稀有材料', '强化'],
+  },
+  'mire-moss': {
+    flavor: '沼地潮湿的苔藓团，可填充柄缝。',
+    traits: ['强化材料'],
+  },
+  'bog-fang': {
+    weaponType: '獠牙刃',
+    flavor: '毒蛙獠牙制成的匕首，刃上泛着幽绿。',
+    traits: ['近战', '毒性'],
+  },
+  'venom-cleaver': {
+    weaponType: '劈斧',
+    flavor: '浸过沼毒的阔斧，伤口会隐隐发麻。',
+    traits: ['近战', '毒性', '破甲'],
+  },
+  'bog-heart': {
+    flavor: '沼母核心，散发腐甜气味。',
+    traits: ['稀有材料', '强化'],
+  },
+  'frost-fur': {
+    flavor: '霜狼毛皮，摸上去刺骨。',
+    traits: ['强化材料'],
+  },
+  'ice-fang': {
+    weaponType: '短刃',
+    flavor: '永不融化的冰牙，出鞘时凝结白雾。',
+    traits: ['近战', '冰寒'],
+  },
+  'glacier-cleaver': {
+    weaponType: '劈斧',
+    flavor: '冰川碎块锻成的重斧，落地有碎冰声。',
+    traits: ['近战', '冰寒', '破甲'],
+  },
+  'frostfang-heart': {
+    flavor: '霜牙首领之心，中央嵌着寒晶。',
+    traits: ['稀有材料', '强化'],
+  },
+  'dune-chitin': {
+    flavor: '沙蝎甲壳碎片，轻而硬。',
+    traits: ['强化材料'],
+  },
+  'scorpion-stinger': {
+    weaponType: '刺刃',
+    flavor: '蝎尾刺改成的刺刃，尖端仍带麻痹液。',
+    traits: ['近战', '麻痹'],
+  },
+  'sandstorm-cleaver': {
+    weaponType: '劈斧',
+    flavor: '沙暴中淬火的阔斧，刃面有风蚀纹。',
+    traits: ['近战', '破甲', '沙暴'],
+  },
+  'storm-core': {
+    flavor: '沙暴凝聚的核心，静置时微微震动。',
+    traits: ['稀有材料', '强化'],
+  },
+  'star-shard': {
+    flavor: '坠星碎屑，夜间会发微光。',
+    traits: ['强化材料'],
+  },
+  'ruin-blade': {
+    weaponType: '石刃',
+    flavor: '废墟石碑削成的钝刃，意外好用。',
+    traits: ['近战', '沉重'],
+  },
+  'astral-cleaver': {
+    weaponType: '劈斧',
+    flavor: '星辉浸染的劈斧，挥动时拖出淡蓝尾迹。',
+    traits: ['近战', '星辉', '破甲'],
+  },
+  'golem-core': {
+    flavor: '石像魔的动力核，纹路仍在缓慢流转。',
+    traits: ['稀有材料', '强化'],
+  },
+  'abyss-ink': {
+    flavor: '暗潮生物喷出的墨汁，干后发紫。',
+    traits: ['强化材料'],
+  },
+  'cult-dagger': {
+    weaponType: '短匕',
+    flavor: '暗潮教徒的仪式短匕，柄上刻着禁语。',
+    traits: ['近战', '邪秽'],
+  },
+  'tide-cleaver': {
+    weaponType: '劈斧',
+    flavor: '暗潮锻造的重斧，斧身渗出黑水。',
+    traits: ['近战', '暗潮', '破甲'],
+  },
+  'tide-lord-heart': {
+    flavor: '暗潮领主之心，按压会渗出墨色液体。',
+    traits: ['稀有材料', '强化'],
+  },
+  'ridge-scale': {
+    flavor: '龙脊山脉的幼龙鳞片，边缘锋利。',
+    traits: ['强化材料'],
+  },
+  'wing-blade': {
+    weaponType: '短剑',
+    flavor: '翼膜骨刺打磨的短剑，轻盈如羽。',
+    traits: ['近战', '迅捷'],
+  },
+  'ridge-cleaver': {
+    weaponType: '劈斧',
+    flavor: '龙脊骨片镶边的重斧，挥砍带风啸。',
+    traits: ['近战', '破甲', '龙息余韵'],
+  },
+  'rockwing-fang': {
+    flavor: '岩翼幼龙的尖牙，仍残留地热。',
+    traits: ['稀有材料', '强化'],
+  },
+  'void-dust': {
+    flavor: '裂隙边缘刮下的虚空尘，触之发麻。',
+    traits: ['强化材料'],
+  },
+  'rift-blade': {
+    weaponType: '短刃',
+    flavor: '裂隙结晶磨成的刃，边缘不稳定地闪烁。',
+    traits: ['近战', '虚空'],
+  },
+  'void-cleaver': {
+    weaponType: '劈斧',
+    flavor: '虚空铁锻成的阔斧，砍击时空间微微扭曲。',
+    traits: ['近战', '虚空', '破甲'],
+  },
+  'rift-core': {
+    flavor: '裂隙看守的核心，内部像有星空在转。',
+    traits: ['稀有材料', '强化'],
+  },
+  'throne-sigil': {
+    flavor: '王座禁卫佩戴的徽记残片。',
+    traits: ['强化材料'],
+  },
+  'guard-blade': {
+    weaponType: '长剑',
+    flavor: '终焉禁卫制式长剑，刃脊镀金。',
+    traits: ['近战', '禁卫'],
+  },
+  'end-cleaver': {
+    weaponType: '劈斧',
+    flavor: '终焉王座前的仪仗斧，沉重得几乎难举。',
+    traits: ['近战', '破甲', '终焉'],
+  },
+  'end-king-crown': {
+    flavor: '终焉君王破碎的冠冕残片，仍有威压。',
+    traits: ['稀有材料', '强化'],
+  },
+  'ashen-crest': {
+    flavor: '周目结算留下的烬灰徽记。',
+    traits: ['纪念', '稀有材料'],
+  },
+  'ember-maul': {
+    weaponType: '重槌',
+    flavor: '烬火淬炼的传说重槌，槌头仍在低鸣。',
+    traits: ['传说', '猛击特化', '击晕'],
+  },
+  'tide-buckler': {
+    weaponType: '冲击刃',
+    flavor: '潮盾与刃合一的奇兵，前冲时溅起水花。',
+    traits: ['传说', '盾击特化', '机动'],
+  },
+  'rift-edge': {
+    weaponType: '斩刃',
+    flavor: '裂隙边缘凝成的斩刃，专克残血之敌。',
+    traits: ['传说', '斩杀', '暴击'],
+  },
+  'cinder-staff': {
+    weaponType: '法杖',
+    flavor: '烬心余烬封入杖尖，火球爆开时卷起赤焰环。',
+    traits: ['传说', '火球特化', '范围'],
+  },
+  'venom-longbow': {
+    weaponType: '长弓',
+    flavor: '弓臂渗着毒涎，箭矢与陷阱皆带蚀骨之毒。',
+    traits: ['传说', '毒箭', '陷阱'],
+  },
+  'nightshade-fang': {
+    weaponType: '短刃',
+    flavor: '夜影中淬炼的毒牙，隐匿与肾击的绝配。',
+    traits: ['传说', '消失', '控制'],
+  },
+};
+
+function inferWeaponType(name: string, id: string): string | undefined {
+  if (id.includes('staff') || name.includes('杖')) {
+    return '法杖';
+  }
+  if (name.includes('劈斧') || id.includes('cleaver') || id.includes('maul')) {
+    return '劈斧';
+  }
+  if (name.includes('短刃') || name.includes('短匕') || name.includes('短剑') || id.includes('blade') || id.includes('dagger') || id.includes('fang') || id.includes('stinger')) {
+    return '短刃';
+  }
+  if (name.includes('长剑') || id.includes('sword')) {
+    return '长剑';
+  }
+  if (name.includes('镐')) {
+    return '镐刃';
+  }
+  return '主手武器';
+}
+
+function applyItemLore(): void {
+  for (const def of Object.values(ITEM_DEFS)) {
+    const lore = ITEM_LORE[def.id];
+    if (lore) {
+      if (lore.weaponType) {
+        def.weaponType = lore.weaponType;
+      }
+      if (lore.flavor) {
+        def.flavor = lore.flavor;
+      }
+      if (lore.traits) {
+        def.traits = lore.traits;
+      }
+      if (lore.effectDesc && !def.effectDesc) {
+        def.effectDesc = lore.effectDesc;
+      }
+    }
+    if (def.kind === 'gear' && !def.weaponType) {
+      def.weaponType = inferWeaponType(def.name, def.id);
+    }
+    if (def.kind === 'gear' && !def.traits) {
+      def.traits = def.quality === 'legendary' ? ['传说', '主手'] : ['主手'];
+    }
+    if (def.kind === 'material' && !def.traits) {
+      def.traits = def.effectDesc?.includes('遗物')
+        ? ['探索遗物', '高价出售']
+        : ['材料'];
+    }
+    if (def.kind === 'potion' && !def.traits) {
+      def.traits = ['消耗品'];
+    }
+    if (!def.flavor) {
+      if (def.kind === 'gear') {
+        def.flavor = `${def.name}，装等 ${def.ilvl} 的主手武器。`;
+      } else if (def.kind === 'material' && !def.effectDesc) {
+        def.flavor = `${def.name}，可用于强化或出售。`;
+      }
+    }
+  }
+}
+
+applyItemLore();
+
+for (const [id, def] of Object.entries(CLASS_GEAR_DEFS)) {
+  ITEM_DEFS[id] = def;
+}
+
+for (const def of Object.values(ITEM_DEFS)) {
+  if (def.kind !== 'gear' || def.classAffinity) {
+    continue;
+  }
+  if (def.legendaryEffect) {
+    def.classAffinity = ['warrior', 'mage', 'hunter', 'rogue'];
+    continue;
+  }
+  if (
+    idLooksClass(def.id, 'staff') ||
+    def.weaponType === '法杖' ||
+    def.weaponType === '魔杖'
+  ) {
+    def.classAffinity = ['mage'];
+  } else if (idLooksClass(def.id, 'bow') || def.weaponType?.includes('弓')) {
+    def.classAffinity = ['hunter'];
+  } else if (
+    idLooksClass(def.id, 'dagger') ||
+    def.weaponType === '双匕' ||
+    def.weaponType === '匕首'
+  ) {
+    def.classAffinity = ['rogue'];
+  } else {
+    def.classAffinity = [...WARRIOR_BASE_AFFINITY];
+  }
+}
+
+function idLooksClass(id: string, token: string): boolean {
+  return id.includes(token);
+}
 
 export function qualityOf(defId: string): ItemQuality {
   return ITEM_DEFS[defId]?.quality ?? 'common';

@@ -1,7 +1,7 @@
 import { sfx } from '../../audio/sfx';
-import { ZONES } from '../data/zones';
-import { expandKitCollision } from '../data/level-kit';
+import { ZONES, zonePlatforms } from '../data/zones';
 import type { BreakableProp, World } from '../types';
+import { BOSS_GATE_H, BOSS_GATE_W } from './boss-encounter';
 import { addItemToBag } from './inventory';
 import { hitboxOverlaps } from './physics';
 
@@ -38,7 +38,15 @@ export function rebuildWorldPlatforms(world: World): void {
       broken[b.id] = true;
     }
   }
-  world.platforms = expandKitCollision(zone.kit, broken);
+  world.platforms = zonePlatforms(zone, broken);
+  if (world.bossGateClosed) {
+    world.platforms.push({
+      x: world.bossGateX,
+      y: 0,
+      w: BOSS_GATE_W,
+      h: BOSS_GATE_H,
+    });
+  }
 }
 
 export function stepBreakables(world: World, dt: number): void {

@@ -371,7 +371,7 @@ A04 起敌人家族尽量套四种行为模：近战、远程、冲锋、自爆/
 | `audio/sfx/ui` | 打开面板、按钮、错误、升级 |
 | `audio/bgm/a01` | 林地循环 |
 | `audio/bgm/camp` | 营地安静循环 |
-| `audio/bgm/boss` | 竖切可先用林地 BOSS 变奏 |
+| `audio/bgm/boss` | BOSS 独立床层（阶段 81：程序合成；可后续换 .ogg） |
 
 新技能无音效、新区无 BGM，按设计文档不算完成。
 

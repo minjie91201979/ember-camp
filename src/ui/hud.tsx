@@ -1,7 +1,25 @@
+import { useEffect, useState } from 'react';
 import { PLAYER } from '../game/config';
-import { CHALLENGE_DURATION } from '../game/systems/challenge';
-import type { AttrKey, HudSnapshot, RespawnChoice } from '../game/types';
+import { CONTROL_HELP } from '../game/data/controls';
+import { PLAYER_LEVEL_CAP } from '../game/systems/stats';
+import { CHALLENGE_DURATION, challengeDurationOf } from '../game/systems/challenge';
+import type { AttrKey, BagSnapshotItem, CampShopRow, HudSnapshot, RespawnChoice } from '../game/types';
 import './hud.css';
+
+type ItemTipPayload = {
+  name: string;
+  quality: string;
+  stats: string[];
+  traits: string[];
+  detail: string | null;
+  compare: BagSnapshotItem['compare'];
+};
+
+type FloatTipState = {
+  left: number;
+  top: number;
+  payload: ItemTipPayload;
+};
 
 type HudProps = {
   vitals: HudSnapshot;
@@ -13,20 +31,42 @@ type HudProps = {
   onClearDraft: () => void;
   onApplyAttrs: () => void;
   onUpgradeSkill: (id: string) => void;
-  onBuy: (defId: string) => void;
+  onLearnSkill: (id: string) => void;
+  onAssignSkillBar: (id: string, slot: number) => void;
+  onBuy: (defId: string, qty?: number) => void;
   onSell: (uid: number) => void;
+  onSellMaterials: () => void;
+  onSellCommonGear: () => void;
+  onSellUncommonGear: () => void;
+  onSellRareGear: () => void;
   onEnhance: () => void;
+  onRepair: () => void;
+  onDismantle: (uid: number) => void;
   onResetAttrs: () => void;
   onResetSkills: () => void;
   onResetSpec: () => void;
   onPickSpec: (id: string) => void;
+  onPickSpecNode: (id: string) => void;
+  onDismissLevelUp: () => void;
+  onLevelUpAttrs: () => void;
+  onLevelUpSkills: () => void;
   onTeleport: (nodeId: string) => void;
   onStartNgPlus: () => void;
   onStartChallenge: () => void;
   onSave: () => void;
   onLoad: () => void;
+  onBackToClassSelect: () => void;
   onUsePotion: (uid?: number) => void;
   onSetAudio: (patch: { bgm?: number; sfx?: number; muted?: boolean }) => void;
+  onSetGameplay: (patch: {
+    showDamageNumbers?: boolean;
+    autoSortBagOnOpen?: boolean;
+    autoPickupConsumables?: boolean;
+  }) => void;
+  onSortBag: () => void;
+  onClosePause: () => void;
+  onPauseOpenChar: () => void;
+  onPauseOpenSkills: () => void;
 };
 
 type SkillSlot = {
@@ -34,7 +74,37 @@ type SkillSlot = {
   name: string;
   ready: boolean;
   cdRatio: number;
+  /** 冷却剩余秒数文案；无冷却为 null */
+  cdLabel: string | null;
+  /** 资源消耗；0 或不适用为 null */
+  costLabel: string | null;
+  /** 当前资源不足 */
+  costShort: boolean;
+  urge?: boolean;
+  /** 药水槽着色 */
+  tone?: 'life' | 'mana';
 };
+
+function formatCdLabel(cd: number): string | null {
+  if (cd <= 0.05) {
+    return null;
+  }
+  if (cd < 1) {
+    return cd.toFixed(1);
+  }
+  return String(Math.ceil(cd));
+}
+
+function skillCostMeta(
+  cost: number,
+  rage: number,
+  empty: boolean,
+): { costLabel: string | null; costShort: boolean } {
+  if (empty || cost <= 0) {
+    return { costLabel: null, costShort: false };
+  }
+  return { costLabel: String(cost), costShort: rage < cost };
+}
 
 const QUALITY_CLASS: Record<string, string> = {
   common: 'inv__item--common',
@@ -44,7 +114,8 @@ const QUALITY_CLASS: Record<string, string> = {
   legendary: 'inv__item--legendary',
 };
 
-const CHALLENGE_HINT = `进入短图，击杀全部精英词缀怪。限时 ${CHALLENGE_DURATION} 秒，成功奖励碎材与金币。`;
+const CHALLENGE_HINT =
+  '短图限时清精英。通关后自动进下一层（词缀重滚、敌人加强），失败回营。刷强化材料与金币。';
 
 export function Hud({
   vitals,
@@ -56,20 +127,38 @@ export function Hud({
   onClearDraft,
   onApplyAttrs,
   onUpgradeSkill,
+  onLearnSkill,
+  onAssignSkillBar,
   onBuy,
   onSell,
+  onSellMaterials,
+  onSellCommonGear,
+  onSellUncommonGear,
+  onSellRareGear,
   onEnhance,
+  onRepair,
+  onDismantle,
   onResetAttrs,
   onResetSkills,
   onResetSpec,
   onPickSpec,
+  onPickSpecNode,
+  onDismissLevelUp,
+  onLevelUpAttrs,
+  onLevelUpSkills,
   onTeleport,
   onStartNgPlus,
   onStartChallenge,
   onSave,
   onLoad,
+  onBackToClassSelect,
   onUsePotion,
   onSetAudio,
+  onSetGameplay,
+  onSortBag,
+  onClosePause,
+  onPauseOpenChar,
+  onPauseOpenSkills,
 }: HudProps): JSX.Element {
   const hpPct = vitals.maxHp <= 0 ? 0 : Math.round((vitals.hp / vitals.maxHp) * 100);
   const ragePct = vitals.maxRage <= 0 ? 0 : Math.round((vitals.rage / vitals.maxRage) * 100);
@@ -78,50 +167,272 @@ export function Hud({
   const slots: SkillSlot[] = [
     {
       key: 'Q',
-      name: '猛击',
-      ready: vitals.slamCd <= 0,
-      cdRatio: vitals.slamCd / PLAYER.slamCooldown,
+      name: vitals.skillQName ?? '猛击',
+      ready: vitals.slamCd <= 0 && vitals.rage >= (vitals.skillQCost ?? 0),
+      cdRatio: vitals.slamCd / Math.max(0.01, vitals.skillQCdMax ?? PLAYER.slamCooldown),
+      cdLabel: formatCdLabel(vitals.slamCd),
+      ...skillCostMeta(
+        vitals.skillQCost ?? 0,
+        vitals.rage,
+        !vitals.skillQName || vitals.skillQName === '空',
+      ),
     },
     {
       key: 'E',
-      name: '盾击',
-      ready: vitals.bashCd <= 0 && vitals.rage >= PLAYER.bashCost,
-      cdRatio: vitals.bashCd / PLAYER.bashCooldown,
+      name: vitals.skillEName ?? '盾击',
+      ready: vitals.bashCd <= 0 && vitals.rage >= (vitals.skillECost ?? PLAYER.bashCost),
+      cdRatio: vitals.bashCd / Math.max(0.01, vitals.skillECdMax ?? PLAYER.bashCooldown),
+      cdLabel: formatCdLabel(vitals.bashCd),
+      ...skillCostMeta(
+        vitals.skillECost ?? PLAYER.bashCost,
+        vitals.rage,
+        !vitals.skillEName || vitals.skillEName === '空',
+      ),
+    },
+    {
+      key: '1',
+      name: vitals.skill3Name ?? '空',
+      ready:
+        Boolean(vitals.skill3Name && vitals.skill3Name !== '空') &&
+        (vitals.skillCd2 ?? 0) <= 0 &&
+        vitals.rage >= (vitals.skill3Cost ?? 0),
+      cdRatio: (vitals.skillCd2 ?? 0) / Math.max(0.01, vitals.skill3CdMax ?? 1),
+      cdLabel: formatCdLabel(vitals.skillCd2 ?? 0),
+      ...skillCostMeta(
+        vitals.skill3Cost ?? 0,
+        vitals.rage,
+        !vitals.skill3Name || vitals.skill3Name === '空',
+      ),
+    },
+    {
+      key: '2',
+      name: vitals.skill4Name ?? '空',
+      ready:
+        Boolean(vitals.skill4Name && vitals.skill4Name !== '空') &&
+        (vitals.skillCd3 ?? 0) <= 0 &&
+        vitals.rage >= (vitals.skill4Cost ?? 0),
+      cdRatio: (vitals.skillCd3 ?? 0) / Math.max(0.01, vitals.skill4CdMax ?? 1),
+      cdLabel: formatCdLabel(vitals.skillCd3 ?? 0),
+      ...skillCostMeta(
+        vitals.skill4Cost ?? 0,
+        vitals.rage,
+        !vitals.skill4Name || vitals.skill4Name === '空',
+      ),
     },
     {
       key: 'R',
-      name: '药水',
-      ready: Boolean(vitals.potionReady) && vitals.hp < vitals.maxHp,
-      cdRatio: 0,
+      name:
+        (vitals.lifePotionCount ?? 0) > 0
+          ? `红药×${vitals.lifePotionCount}`
+          : '红药',
+      ready: Boolean(vitals.lifePotionReady),
+      cdRatio: (vitals.potionCd ?? 0) / Math.max(0.01, vitals.potionCdMax ?? 1.2),
+      cdLabel: formatCdLabel(vitals.potionCd ?? 0),
+      costLabel: null,
+      costShort: false,
+      urge: Boolean(vitals.potionUrge),
+      tone: 'life',
     },
-    { key: 'T', name: '', ready: false, cdRatio: 0 },
+    {
+      key: 'T',
+      name:
+        (vitals.manaPotionCount ?? 0) > 0
+          ? `蓝药×${vitals.manaPotionCount}`
+          : '蓝药',
+      ready: Boolean(vitals.manaPotionReady),
+      cdRatio: (vitals.potionCd ?? 0) / Math.max(0.01, vitals.potionCdMax ?? 1.2),
+      cdLabel: formatCdLabel(vitals.potionCd ?? 0),
+      costLabel: null,
+      costShort: false,
+      urge: Boolean(vitals.manaPotionUrge),
+      tone: 'mana',
+    },
   ];
   const hasDraft = vitals.attrs.some((row) => row.draft > 0);
+  const worldMapNodes = vitals.worldMapNodes ?? [];
+  const worldHub = worldMapNodes.find((n) => n.zoneId === 'a01');
+  const worldSpokes = worldMapNodes.filter((n) => n.zoneId !== 'a01');
+  const worldRayEnds = worldSpokes.map((_, i) => {
+    const col = i % 4;
+    const row = Math.floor(i / 4);
+    return {
+      x: 28 + ((col + 0.5) / 4) * 68,
+      y: 10 + ((row + 0.5) / 3) * 80,
+    };
+  });
   const audio = vitals.audio ?? { bgm: 0.85, sfx: 0.9, muted: false };
+  const gameplay = vitals.gameplay ?? {
+    showDamageNumbers: true,
+    autoSortBagOnOpen: true,
+    autoPickupConsumables: true,
+  };
+  const [floatTip, setFloatTip] = useState<FloatTipState | null>(null);
+  const [confirmAct, setConfirmAct] = useState<
+    | { kind: 'discard' | 'sell' | 'dismantle'; uid: number }
+    | { kind: 'sell-mats' | 'sell-white' | 'sell-green' | 'sell-blue' }
+    | null
+  >(null);
+
+  useEffect(() => {
+    if (
+      !vitals.invOpen &&
+      vitals.campOpen !== 'merchant' &&
+      vitals.campOpen !== 'apothecary' &&
+      vitals.campOpen !== 'weaponsmith'
+    ) {
+      setFloatTip(null);
+    }
+    setConfirmAct(null);
+  }, [vitals.invOpen, vitals.campOpen]);
+
+  const placeFloatTip = (el: HTMLElement, payload: ItemTipPayload): void => {
+    const rect = el.getBoundingClientRect();
+    const tipW = 260;
+    const gap = 10;
+    let left = rect.left - tipW - gap;
+    if (left < 12) {
+      left = Math.min(rect.right + gap, window.innerWidth - tipW - 12);
+    }
+    let top = rect.top;
+    if (top + 180 > window.innerHeight) {
+      top = Math.max(12, window.innerHeight - 200);
+    }
+    setFloatTip({ left, top, payload });
+  };
+
+  const tipFromBag = (item: BagSnapshotItem): ItemTipPayload => ({
+    name: item.name,
+    quality: item.quality,
+    stats: item.stats ?? [],
+    traits: item.traits ?? [],
+    detail: item.detail ?? item.desc,
+    compare: item.compare ?? [],
+  });
+
+  const tipFromShop = (row: CampShopRow): ItemTipPayload => ({
+    name: row.name,
+    quality: row.quality,
+    stats: row.stats ?? [],
+    traits: row.traits ?? [],
+    detail: row.flavor ?? row.detail,
+    compare: row.compare ?? [],
+  });
+
+  const requestDiscard = (uid: number): void => {
+    if (confirmAct?.kind === 'discard' && confirmAct.uid === uid) {
+      setConfirmAct(null);
+      onDiscard(uid);
+      return;
+    }
+    setConfirmAct({ kind: 'discard', uid });
+  };
+
+  const requestDismantle = (uid: number): void => {
+    if (confirmAct?.kind === 'dismantle' && confirmAct.uid === uid) {
+      setConfirmAct(null);
+      onDismantle(uid);
+      return;
+    }
+    setConfirmAct({ kind: 'dismantle', uid });
+  };
+
+  const requestSell = (uid: number): void => {
+    if (confirmAct?.kind === 'sell' && confirmAct.uid === uid) {
+      setConfirmAct(null);
+      onSell(uid);
+      return;
+    }
+    setConfirmAct({ kind: 'sell', uid });
+  };
+
+  const requestSellMaterials = (): void => {
+    if (confirmAct?.kind === 'sell-mats') {
+      setConfirmAct(null);
+      onSellMaterials();
+      return;
+    }
+    setConfirmAct({ kind: 'sell-mats' });
+  };
+
+  const requestSellCommonGear = (): void => {
+    if (confirmAct?.kind === 'sell-white') {
+      setConfirmAct(null);
+      onSellCommonGear();
+      return;
+    }
+    setConfirmAct({ kind: 'sell-white' });
+  };
+
+  const requestSellUncommonGear = (): void => {
+    if (confirmAct?.kind === 'sell-green') {
+      setConfirmAct(null);
+      onSellUncommonGear();
+      return;
+    }
+    setConfirmAct({ kind: 'sell-green' });
+  };
+
+  const requestSellRareGear = (): void => {
+    if (confirmAct?.kind === 'sell-blue') {
+      setConfirmAct(null);
+      onSellRareGear();
+      return;
+    }
+    setConfirmAct({ kind: 'sell-blue' });
+  };
+
+  const hasTipPayload = (p: ItemTipPayload): boolean =>
+    p.stats.length > 0 ||
+    p.traits.length > 0 ||
+    p.compare.length > 0 ||
+    Boolean(p.detail);
+
   return (
-    <div className="hud">
+    <div
+      className={`hud${vitals.awaitRespawn ? ' hud--dead' : ''}${vitals.fallWarn ? ' hud--pit-warn' : ''}${vitals.settingsOpen ? ' hud--paused' : ''}`}
+    >
       <header className="hud__brand">
-        <p className="hud__kicker">封版 · 阶段 7</p>
+        <p className="hud__kicker">阶段 87 · 越级战斗</p>
         <h1>烬营远征</h1>
         <p className="hud__sub">
           {vitals.zoneName}
-          {vitals.ngPlusLevel > 0 ? ` · NG+${vitals.ngPlusLevel}` : ''} · 战士 · Lv.
+          {vitals.ngPlusLevel > 0 ? ` · NG+${vitals.ngPlusLevel}` : ''} ·{' '}
+          {vitals.className ?? '战士'} · Lv.
           {vitals.level}
           {vitals.specName ? ` · ${vitals.specName}` : ''}
           {vitals.unspentAttr > 0 || vitals.unspentSkill > 0 ? ' · 有未分配点' : ''}
         </p>
         <p className="hud__meta">
-          攻 {vitals.atk}
-          {vitals.weaponEnhance > 0 ? `(+${vitals.weaponEnhance})` : ''} · 防 {vitals.def} · 暴{' '}
-          {vitals.critPct}% · 金 {vitals.gold}
+              {vitals.classId === 'mage' ? (
+            <>
+              法强 {vitals.sp ?? 0}
+              {vitals.weaponEnhance > 0 ? `(+${vitals.weaponEnhance})` : ''}
+              {vitals.weaponDur !== null && vitals.weaponDur <= 0 ? ' · 破损' : ''} · 防{' '}
+              {vitals.def} · 暴 {vitals.critPct}% · 金 {vitals.gold}
+            </>
+          ) : (
+            <>
+              攻 {vitals.atk}
+              {vitals.weaponEnhance > 0 ? `(+${vitals.weaponEnhance})` : ''}
+              {vitals.weaponDur !== null && vitals.weaponDur <= 0 ? ' · 破损' : ''} · 防{' '}
+              {vitals.def} · 暴 {vitals.critPct}% · 金 {vitals.gold}
+            </>
+          )}
         </p>
+        {vitals.qaActive ? (
+          <p className="hud__qa">
+            QA{vitals.qaGod ? ' · 无敌' : ''} · F1满血 F2等级 F3清场 F4BOSS F5下区 F6解锁 F7补给 F8关 F9无敌
+          </p>
+        ) : null}
         <div className="hud__bar hud__bar--xp">
-          <span className="hud__bar-label">经验</span>
+          <span className="hud__bar-label">Lv.{vitals.level}</span>
           <div className="hud__bar-track">
             <i className="hud__bar-fill hud__bar-fill--xp" style={{ width: `${xpPct}%` }} />
           </div>
           <span className="hud__bar-num">
-            {vitals.xp}/{vitals.xpToNext}
+            {vitals.level >= PLAYER_LEVEL_CAP
+              ? '满级 · 击杀折金'
+              : `${vitals.xp}/${vitals.xpToNext} · ${xpPct}%`}
           </span>
         </div>
       </header>
@@ -154,20 +465,37 @@ export function Hud({
       ) : vitals.challengeActive ? (
         <div className="bossbar bossbar--challenge">
           <div className="bossbar__head">
-            <b>词缀试炼</b>
+            <b>词缀试炼 · 第 {vitals.challengeFloor} 层</b>
             <span>{Math.ceil(vitals.challengeT)}s</span>
           </div>
           <div className="bossbar__track">
             <i
               className="bossbar__fill bossbar__fill--challenge"
               style={{
-                width: `${Math.max(0, Math.min(100, Math.round((vitals.challengeT / 90) * 100)))}%`,
+                width: `${Math.max(
+                  0,
+                  Math.min(
+                    100,
+                    Math.round(
+                      (vitals.challengeT /
+                        challengeDurationOf(Math.max(1, vitals.challengeFloor))) *
+                        100,
+                    ),
+                  ),
+                )}%`,
               }}
             />
           </div>
           <div className="bossbar__cast">
-            <span>清光全部精英</span>
+            <span>
+              {(vitals.challengeRunAffixes ?? []).length > 0
+                ? vitals.challengeRunAffixes.join(' / ')
+                : '清光全部精英'}
+            </span>
           </div>
+          {(vitals.challengeAffixHints ?? []).length > 0 ? (
+            <p className="bossbar__hint">{vitals.challengeAffixHints.join('；')}</p>
+          ) : null}
         </div>
       ) : vitals.eliteName ? (
         <div className="bossbar bossbar--elite">
@@ -190,12 +518,60 @@ export function Hud({
               <span>{vitals.eliteAffixes.join(' · ')}</span>
             </div>
           ) : null}
+          {(vitals.eliteAffixHints ?? []).length > 0 ? (
+            <p className="bossbar__hint">{vitals.eliteAffixHints.join('；')}</p>
+          ) : null}
+        </div>
+      ) : null}
+
+      <aside
+        className={`minimap${
+          vitals.invOpen ||
+          vitals.charOpen ||
+          vitals.skillOpen ||
+          vitals.catalogOpen ||
+          vitals.settingsOpen ||
+          vitals.levelUpOpen ||
+          vitals.campOpen
+            ? ' minimap--dim'
+            : ''
+        }`}
+        aria-label="区域小地图"
+      >
+        <div className="minimap__frame">
+          {(vitals.miniMap?.marks ?? []).map((m, i) => (
+            <i
+              key={`${m.kind}-${i}`}
+              className={`minimap__mark minimap__mark--${m.kind}`}
+              style={{ left: `${m.u * 100}%`, top: `${m.v * 100}%` }}
+            />
+          ))}
+        </div>
+        <p className="minimap__legend">
+          <span>你</span>
+          <span>足迹</span>
+          <span>传送</span>
+          <span>装备</span>
+          <span>秘密</span>
+          <span>
+            {vitals.miniMap?.secretsTotal
+              ? `${vitals.miniMap.secretsClaimed}/${vitals.miniMap.secretsTotal}`
+              : '—'}
+          </span>
+        </p>
+      </aside>
+
+      {vitals.zoneAnnounce ? (
+        <div className="zone-announce" aria-live="polite">
+          <p className="zone-announce__kicker">抵达</p>
+          <h2 className="zone-announce__name">{vitals.zoneAnnounce.name}</h2>
+          <p className="zone-announce__sub">{vitals.zoneAnnounce.sub}</p>
         </div>
       ) : null}
 
       <div className="hud__dock">
         <div className="hud__vitals">
-          <div className="hud__bar">
+          <div className={vitals.lowHp ? 'hud__bar hud__bar--danger' : 'hud__bar'}>
             <span className="hud__bar-label">生命</span>
             <div className="hud__bar-track">
               <i className="hud__bar-fill hud__bar-fill--hp" style={{ width: `${hpPct}%` }} />
@@ -204,8 +580,26 @@ export function Hud({
               {vitals.hp}/{vitals.maxHp}
             </span>
           </div>
-          <div className={vitals.rageWarn ? 'hud__bar hud__bar--warn' : 'hud__bar'}>
-            <span className="hud__bar-label">怒气</span>
+          {vitals.manaShieldOn && vitals.manaShieldHp > 0 ? (
+            <div className="hud__bar hud__bar--shield">
+              <span className="hud__bar-label">护盾</span>
+              <div className="hud__bar-track">
+                <i
+                  className="hud__bar-fill hud__bar-fill--shield"
+                  style={{
+                    width: `${Math.min(100, Math.round((vitals.manaShieldHp / Math.max(vitals.maxRage, 1)) * 100))}%`,
+                  }}
+                />
+              </div>
+              <span className="hud__bar-num">{vitals.manaShieldHp}</span>
+            </div>
+          ) : null}
+          <div
+            className={`hud__bar${vitals.rageWarn ? ' hud__bar--warn' : ''}${
+              vitals.lowResource ? ' hud__bar--resource-danger' : ''
+            }`}
+          >
+            <span className="hud__bar-label">{vitals.resourceLabel ?? '怒气'}</span>
             <div className="hud__bar-track">
               <i className="hud__bar-fill hud__bar-fill--rage" style={{ width: `${ragePct}%` }} />
             </div>
@@ -213,13 +607,34 @@ export function Hud({
               {vitals.rage}/{vitals.maxRage}
             </span>
           </div>
+          {vitals.classId === 'rogue' ? (
+            <div className="hud__combo" aria-label="连击点">
+              {Array.from({ length: 5 }, (_, i) => (
+                <i
+                  key={i}
+                  className={
+                    i < (vitals.comboPoints ?? 0) ? 'hud__combo-pip hud__combo-pip--on' : 'hud__combo-pip'
+                  }
+                />
+              ))}
+            </div>
+          ) : null}
         </div>
-        {vitals.rageWarn ? <p className="hud__down">怒气不足</p> : null}
+        {vitals.rageWarn ? (
+          <p className="hud__down">{vitals.resourceLabel ?? '怒气'}不足</p>
+        ) : null}
         {vitals.tutorialHint ? <p className="hud__tutorial">{vitals.tutorialHint}</p> : null}
         {vitals.levelToast ? <p className="hud__levelup">{vitals.levelToast}</p> : null}
         {vitals.nearbyLootName ? (
-          <p className="hud__prompt">
+          <p
+            className={`hud__prompt${
+              vitals.nearbyLootTone ? ` hud__prompt--loot-${vitals.nearbyLootTone}` : ''
+            }`}
+          >
             <kbd>F</kbd> 拾取 {vitals.nearbyLootName}
+            {vitals.nearbyLootCompare ? (
+              <span className="hud__loot-cmp"> · {vitals.nearbyLootCompare}</span>
+            ) : null}
           </p>
         ) : null}
         {vitals.nearbySecretPrompt ? (
@@ -227,19 +642,65 @@ export function Hud({
             <kbd>F</kbd> 开启 {vitals.nearbySecretPrompt}
           </p>
         ) : null}
+        {!vitals.nearbyLootName && !vitals.nearbySecretPrompt && vitals.nearbyCampPrompt ? (
+          <p className="hud__prompt hud__prompt--camp">
+            <kbd>F</kbd> {vitals.nearbyCampPrompt}
+          </p>
+        ) : null}
+        {!vitals.nearbyLootName &&
+        !vitals.nearbySecretPrompt &&
+        !vitals.nearbyCampPrompt &&
+        vitals.potionUrge ? (
+          <p className="hud__prompt hud__prompt--urge">
+            <kbd>R</kbd> 红药 · 生命危急
+          </p>
+        ) : null}
+        {!vitals.nearbyLootName &&
+        !vitals.nearbySecretPrompt &&
+        !vitals.nearbyCampPrompt &&
+        !vitals.potionUrge &&
+        vitals.manaPotionUrge ? (
+          <p className="hud__prompt hud__prompt--urge hud__prompt--mana">
+            <kbd>T</kbd> 蓝药 · {vitals.resourceLabel ?? '资源'}危急
+          </p>
+        ) : null}
+        {!vitals.nearbyLootName &&
+        !vitals.nearbySecretPrompt &&
+        !vitals.nearbyCampPrompt &&
+        !vitals.potionUrge &&
+        !vitals.manaPotionUrge &&
+        vitals.levelGapWarn ? (
+          <p className="hud__prompt hud__prompt--gap">{vitals.levelGapWarn}</p>
+        ) : null}
         <div className="hud__save">
-          <button type="button" onClick={onSave}>
+          <button type="button" disabled={vitals.awaitRespawn || vitals.dead} onClick={onSave}>
             存档
           </button>
-          <button type="button" onClick={onLoad}>
+          <button type="button" disabled={vitals.awaitRespawn || vitals.dead} onClick={onLoad}>
             读档
+          </button>
+          <button type="button" onClick={onBackToClassSelect}>
+            选职
           </button>
         </div>
         <ul className="hud__skills">
           {slots.map((slot) => (
-            <li key={slot.key} className={slot.ready ? 'hud__slot' : 'hud__slot hud__slot--wait'}>
+            <li
+              key={slot.key}
+              className={`hud__slot${slot.ready ? '' : ' hud__slot--wait'}${
+                slot.urge ? ' hud__slot--urge' : ''
+              }${slot.tone === 'life' ? ' hud__slot--life' : ''}${
+                slot.tone === 'mana' ? ' hud__slot--mana' : ''
+              }`}
+            >
               {slot.cdRatio > 0 ? (
                 <i className="hud__slot-cd" style={{ height: `${Math.min(1, slot.cdRatio) * 100}%` }} />
+              ) : null}
+              {slot.cdLabel ? <em className="hud__slot-sec">{slot.cdLabel}</em> : null}
+              {slot.costLabel ? (
+                <em className={`hud__slot-cost${slot.costShort ? ' hud__slot-cost--short' : ''}`}>
+                  {slot.costLabel}
+                </em>
               ) : null}
               {slot.name ? <b>{slot.name}</b> : null}
               <span>{slot.key}</span>
@@ -259,15 +720,31 @@ export function Hud({
           <li>
             <kbd>K</kbd>
             技能
-            {vitals.unspentSkill > 0 || vitals.needsSpec ? <em className="hud__dot" /> : null}
+            {vitals.unspentSkill > 0 || vitals.needsSpec || vitals.specNodePickTier !== null ? (
+              <em className="hud__dot" />
+            ) : null}
           </li>
           <li>
             <kbd>L</kbd>
             图鉴
           </li>
-          <li>
+          <li className={vitals.potionUrge ? 'hud__key--urge' : undefined}>
             <kbd>R</kbd>
-            药水
+            红药
+            {(vitals.lifePotionCount ?? 0) > 0 ? (
+              <em className="hud__count">×{vitals.lifePotionCount}</em>
+            ) : null}
+          </li>
+          <li className={vitals.manaPotionUrge ? 'hud__key--urge hud__key--mana' : undefined}>
+            <kbd>T</kbd>
+            蓝药
+            {(vitals.manaPotionCount ?? 0) > 0 ? (
+              <em className="hud__count">×{vitals.manaPotionCount}</em>
+            ) : null}
+          </li>
+          <li>
+            <kbd>Esc</kbd>
+            暂停
           </li>
           <li>
             <kbd>O</kbd>
@@ -282,8 +759,9 @@ export function Hud({
 
       {vitals.awaitRespawn ? (
         <div className="death">
-          <h2>倒下了</h2>
+          <h2>{vitals.deathCause === 'fall' ? '坠落身亡' : '倒下了'}</h2>
           <p>选择复活地点</p>
+          {!vitals.hasBanner ? <p className="death__hint">尚未激活旗帜 · 请回营</p> : null}
           <div className="death__actions">
             <button
               type="button"
@@ -303,60 +781,152 @@ export function Hud({
       {vitals.invOpen ? (
         <div className="inv">
           <header className="inv__head">
-            <h2>背包</h2>
+            <div className="inv__head-row">
+              <h2>背包</h2>
+              <button
+                type="button"
+                className="inv__sort"
+                disabled={vitals.bag.length < 2}
+                onClick={() => onSortBag()}
+              >
+                排序
+              </button>
+            </div>
             <p>
-              {vitals.bag.length}/{vitals.bagCap ?? 20} · 金币 {vitals.gold}
+              {vitals.bag.length}/{vitals.bagCap ?? 40} · 金币 {vitals.gold}
+              {(vitals.bagSlotsLeft ?? 99) <= 2 && (vitals.bagSlotsLeft ?? 0) > 0
+                ? ` · 将满（剩 ${vitals.bagSlotsLeft}）`
+                : ''}
+              {(vitals.bagSlotsLeft ?? 1) <= 0 ? ' · 已满' : ''}
             </p>
           </header>
           <ul className="inv__list">
             {vitals.bag.length === 0 ? <li className="inv__empty">空空如也</li> : null}
-            {vitals.bag.map((item) => (
-              <li key={item.uid} className={`inv__item ${QUALITY_CLASS[item.quality] ?? ''}`}>
-                <span>
-                  {item.name}
-                  {item.qty > 1 ? ` ×${item.qty}` : ''}
-                  {item.equipped ? ' · 已装备' : ''}
-                  {item.desc ? (
-                    <>
-                      <br />
-                      <small>{item.desc}</small>
-                    </>
-                  ) : null}
-                </span>
-                <div className="inv__item-actions">
-                  {item.canEquip && !item.equipped ? (
-                    <button type="button" onClick={() => onEquip(item.uid)}>
-                      装备
+            {vitals.bag.map((item) => {
+              const payload = tipFromBag(item);
+              const hasTip = hasTipPayload(payload);
+              return (
+                <li
+                  key={item.uid}
+                  className={`inv__item ${QUALITY_CLASS[item.quality] ?? ''}${hasTip ? ' inv__item--tip' : ''}`}
+                  tabIndex={hasTip ? 0 : undefined}
+                  onMouseEnter={(e) => {
+                    if (hasTip) {
+                      placeFloatTip(e.currentTarget, payload);
+                    }
+                  }}
+                  onMouseLeave={() => setFloatTip(null)}
+                  onFocus={(e) => {
+                    if (hasTip) {
+                      placeFloatTip(e.currentTarget, payload);
+                    }
+                  }}
+                  onBlur={() => setFloatTip(null)}
+                >
+                  <div className="inv__item-body">
+                    <strong className="inv__item-name">
+                      {item.name}
+                      {item.qty > 1 ? ` ×${item.qty}` : ''}
+                      {item.equipped ? ' · 已装备' : ''}
+                    </strong>
+                  </div>
+                  <div className="inv__item-actions">
+                    {item.canEquip && !item.equipped ? (
+                      <button type="button" onClick={() => onEquip(item.uid)}>
+                        装备
+                      </button>
+                    ) : null}
+                    {item.canUse ? (
+                      <button type="button" onClick={() => onUsePotion(item.uid)}>
+                        使用
+                      </button>
+                    ) : null}
+                    {item.canDismantle ? (
+                      <button type="button" onClick={() => requestDismantle(item.uid)}>
+                        {confirmAct?.kind === 'dismantle' && confirmAct.uid === item.uid
+                          ? '确认分解'
+                          : '分解'}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      className="inv__discard"
+                      onClick={() => requestDiscard(item.uid)}
+                    >
+                      {confirmAct?.kind === 'discard' && confirmAct.uid === item.uid
+                        ? `确认丢弃（约 ${item.sellPrice} 金）`
+                        : '丢弃'}
                     </button>
-                  ) : null}
-                  {item.canUse ? (
-                    <button type="button" onClick={() => onUsePotion(item.uid)}>
-                      使用
-                    </button>
-                  ) : null}
-                  <button
-                    type="button"
-                    className="inv__discard"
-                    onClick={() => onDiscard(item.uid)}
-                  >
-                    丢弃
-                  </button>
-                </div>
-              </li>
-            ))}
+                  </div>
+                </li>
+              );
+            })}
           </ul>
           <p className="inv__hint">
-            <kbd>I</kbd> / <kbd>Esc</kbd> 关闭 · <kbd>R</kbd> 快捷喝药 · 丢弃整组腾空格
+            <kbd>I</kbd> / <kbd>Esc</kbd> 关闭 · 「排序」或暂停里可开自动排序 · 悬停对比当前主手 · 未装备可分解为材料 ·
+            丢弃需再点确认（不退金） · <kbd>R</kbd> 红药 / <kbd>T</kbd> 蓝药
           </p>
         </div>
       ) : null}
 
+      {floatTip ? (
+        <div
+          className={`inv__float-tip ${QUALITY_CLASS[floatTip.payload.quality] ?? ''}`}
+          role="tooltip"
+          style={{ left: floatTip.left, top: floatTip.top }}
+        >
+          <strong className="inv__float-tip-name">{floatTip.payload.name}</strong>
+          {floatTip.payload.stats.length > 0 ? (
+            <ul className="inv__stats">
+              {floatTip.payload.stats.map((line) => (
+                <li key={line}>{line}</li>
+              ))}
+            </ul>
+          ) : null}
+          {floatTip.payload.compare.length > 0 ? (
+            <ul className="inv__compare">
+              {floatTip.payload.compare.map((line) => (
+                <li
+                  key={line.text}
+                  className={`inv__compare-line inv__compare-line--${line.tone}`}
+                >
+                  {line.text}
+                </li>
+              ))}
+            </ul>
+          ) : null}
+          {floatTip.payload.traits.length > 0 ? (
+            <p className="inv__traits">
+              {floatTip.payload.traits.map((t) => (
+                <span key={t} className="inv__trait">
+                  {t}
+                </span>
+              ))}
+            </p>
+          ) : null}
+          {floatTip.payload.detail ? (
+            <p className="inv__detail">{floatTip.payload.detail}</p>
+          ) : null}
+        </div>
+      ) : null}
+
       {vitals.settingsOpen ? (
-        <div className="inv inv--settings">
+        <div className="inv inv--settings" role="dialog" aria-label="暂停">
           <header className="inv__head">
-            <h2>设置</h2>
-            <p>音频与快捷键</p>
+            <h2>暂停</h2>
+            <p>世界已冻结</p>
           </header>
+          <div className="panel__actions" style={{ marginBottom: 12 }}>
+            <button type="button" className="panel__primary" onClick={onClosePause}>
+              继续
+            </button>
+            <button type="button" className="death__btn" onClick={onPauseOpenChar}>
+              加点 <kbd>C</kbd>
+            </button>
+            <button type="button" className="death__btn" onClick={onPauseOpenSkills}>
+              技能 <kbd>K</kbd>
+            </button>
+          </div>
           <div className="settings">
             <label className="settings__row">
               <span>静音</span>
@@ -388,10 +958,48 @@ export function Hud({
                 onChange={(e) => onSetAudio({ sfx: Number(e.target.value) / 100 })}
               />
             </label>
+            <label className="settings__row">
+              <span>伤害飘字</span>
+              <input
+                type="checkbox"
+                checked={gameplay.showDamageNumbers}
+                onChange={(e) => onSetGameplay({ showDamageNumbers: e.target.checked })}
+              />
+            </label>
+            <label className="settings__row">
+              <span>打开背包自动排序</span>
+              <input
+                type="checkbox"
+                checked={gameplay.autoSortBagOnOpen}
+                onChange={(e) => onSetGameplay({ autoSortBagOnOpen: e.target.checked })}
+              />
+            </label>
+            <label className="settings__row">
+              <span>自动拾取材料/药水</span>
+              <input
+                type="checkbox"
+                checked={gameplay.autoPickupConsumables}
+                onChange={(e) => onSetGameplay({ autoPickupConsumables: e.target.checked })}
+              />
+            </label>
+            <div className="settings__row">
+              <span>角色</span>
+              <button type="button" className="settings__btn" onClick={onBackToClassSelect}>
+                返回选职
+              </button>
+            </div>
           </div>
+          <h3 className="settings__sub">操作键位</h3>
+          <ul className="settings__keys" aria-label="操作键位">
+            {CONTROL_HELP.map((row) => (
+              <li key={row.keys}>
+                <kbd>{row.keys}</kbd>
+                <span>{row.action}</span>
+              </li>
+            ))}
+          </ul>
           <p className="inv__hint">
-            换区 / 击败 BOSS / 复活会自动存档。
-            <kbd>O</kbd> / <kbd>Esc</kbd> 关闭
+            <kbd>Esc</kbd> / <kbd>O</kbd> 继续 · 换区 / BOSS / 复活会自动存档
           </p>
         </div>
       ) : null}
@@ -496,6 +1104,31 @@ export function Hud({
         </div>
       ) : null}
 
+      {vitals.levelUpOpen && !vitals.specPickOpen && vitals.specNodePickTier === null ? (
+        <div className="levelup-prompt" role="dialog" aria-label="升级加点">
+          <p className="levelup-prompt__kicker">升级</p>
+          <h2 className="levelup-prompt__title">Lv.{vitals.level}</h2>
+          <p className="levelup-prompt__gain">
+            +{vitals.levelUpGainAttr} 属性点 · +{vitals.levelUpGainSkill} 技能点
+          </p>
+          <p className="levelup-prompt__hint">点数会保留，可随时按 C / K 分配</p>
+          <div className="levelup-prompt__actions">
+            <button type="button" className="panel__primary" onClick={onLevelUpAttrs}>
+              去加点
+            </button>
+            <button type="button" className="death__btn" onClick={onLevelUpSkills}>
+              去技能
+            </button>
+            <button type="button" className="death__btn" onClick={onDismissLevelUp}>
+              稍后
+            </button>
+          </div>
+          <p className="inv__hint">
+            <kbd>Esc</kbd> 稍后
+          </p>
+        </div>
+      ) : null}
+
       {vitals.specPickOpen ? (
         <div className="panel panel--spec">
           <header className="inv__head">
@@ -526,6 +1159,37 @@ export function Hud({
         </div>
       ) : null}
 
+      {vitals.specNodePickTier !== null ? (
+        <div className="panel panel--spec">
+          <header className="inv__head">
+            <h2>专精节点</h2>
+            <p>Lv.{vitals.specNodePickTier} · {vitals.specName ?? '专精'} · 三选一</p>
+          </header>
+          <ul className="spec__list">
+            {vitals.specNodeOptions.map((node) => (
+              <li key={node.id} className="spec__card">
+                <div className="spec__title">
+                  <b>{node.name}</b>
+                </div>
+                <ul className="spec__effects">
+                  <li>{node.desc}</li>
+                </ul>
+                <button
+                  type="button"
+                  className="panel__primary"
+                  onClick={() => onPickSpecNode(node.id)}
+                >
+                  选择
+                </button>
+              </li>
+            ))}
+          </ul>
+          <p className="inv__hint">
+            <kbd>Esc</kbd> 稍后选择 · 可在技能面板查看已选节点
+          </p>
+        </div>
+      ) : null}
+
       {vitals.skillOpen ? (
         <div className="panel panel--skill">
           <header className="inv__head">
@@ -535,6 +1199,15 @@ export function Hud({
           <p className="spec__current">
             专精：{vitals.specName ?? (vitals.needsSpec ? '未选择' : '未解锁')}
           </p>
+          {vitals.specNodePicks.length > 0 ? (
+            <ul className="spec__effects spec__effects--picks">
+              {vitals.specNodePicks.map((n) => (
+                <li key={`${n.tier}-${n.name}`}>
+                  Lv.{n.tier} · {n.name}：{n.desc}
+                </li>
+              ))}
+            </ul>
+          ) : null}
           {vitals.needsSpec ? (
             <ul className="spec__list spec__list--compact">
               {vitals.specs.map((spec) => (
@@ -557,64 +1230,249 @@ export function Hud({
           ) : null}
           <ul className="skill__list">
             {vitals.skills.map((skill) => (
-              <li key={skill.id} className="skill__row">
+              <li
+                key={skill.id}
+                className={`skill__row${!skill.learned ? ' skill__row--locked' : ''}${skill.upcoming ? ' skill__row--upcoming' : ''}${skill.barLabel ? ' skill__row--onbar' : ''}`}
+              >
                 <div>
                   <b>
-                    {skill.name} · {skill.level}/5
+                    {skill.name}
+                    {skill.learned ? ` · ${skill.level}/5` : ` · 需求 Lv.${skill.reqLevel ?? 1}`}
+                    {skill.barLabel ? ` · ${skill.barLabel}` : ''}
                   </b>
                   <small>{skill.desc}</small>
+                  {skill.compare.length > 0 ? (
+                    <ul className="inv__compare skill__compare">
+                      {skill.compare.map((line) => (
+                        <li
+                          key={line.text}
+                          className={`inv__compare-line inv__compare-line--${line.tone}`}
+                        >
+                          {line.text}
+                        </li>
+                      ))}
+                    </ul>
+                  ) : null}
+                  {skill.learned && !skill.upcoming ? (
+                    <div className="skill__slots">
+                      {[0, 1, 2, 3].map((slot) => {
+                        const label = slot === 0 ? 'Q' : slot === 1 ? 'E' : slot === 2 ? '1' : '2';
+                        const active = skill.barSlot === slot;
+                        return (
+                          <button
+                            key={label}
+                            type="button"
+                            className={`skill__slot-btn${active ? ' skill__slot-btn--on' : ''}`}
+                            onClick={() => onAssignSkillBar(skill.id, slot)}
+                          >
+                            {label}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : null}
                 </div>
-                <button
-                  type="button"
-                  disabled={!skill.canUpgrade}
-                  onClick={() => onUpgradeSkill(skill.id)}
-                >
-                  升级{skill.cost > 0 ? ` (${skill.cost})` : ''}
-                </button>
+                {skill.upcoming ? (
+                  <button type="button" disabled>
+                    即将开放
+                  </button>
+                ) : !skill.learned ? (
+                  <button
+                    type="button"
+                    disabled={!skill.canLearn}
+                    onClick={() => onLearnSkill(skill.id)}
+                  >
+                    学习 ({skill.learnCost ?? 1})
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={!skill.canUpgrade}
+                    onClick={() => onUpgradeSkill(skill.id)}
+                  >
+                    升级{skill.cost > 0 ? ` (${skill.cost})` : ''}
+                  </button>
+                )}
               </li>
             ))}
           </ul>
           <p className="inv__hint">
-            <kbd>K</kbd> / <kbd>Esc</kbd> 关闭 · 升级提高技能伤害倍率
+            <kbd>K</kbd> / <kbd>Esc</kbd> 关闭 · 点 Q/E/1/2 换栏 · 对比相对 Q 栏
           </p>
         </div>
       ) : null}
 
-      {vitals.campOpen === 'merchant' ? (
+      {vitals.campOpen === 'merchant' ||
+      vitals.campOpen === 'apothecary' ||
+      vitals.campOpen === 'weaponsmith' ? (
         <div className="panel panel--camp">
           <header className="inv__head">
-            <h2>杂货商人</h2>
+            <h2>
+              {vitals.campOpen === 'apothecary'
+                ? '药水商人'
+                : vitals.campOpen === 'weaponsmith'
+                  ? '武器商人'
+                  : '杂货商人'}
+            </h2>
             <p>金币 {vitals.gold}</p>
           </header>
           {vitals.campMessage ? <p className="camp__msg">{vitals.campMessage}</p> : null}
           <h3 className="camp__sub">购买</h3>
           <ul className="skill__list">
-            {vitals.shopStock.map((row) => (
-              <li key={row.defId} className="skill__row">
-                <span>{row.name}</span>
-                <button type="button" onClick={() => onBuy(row.defId)}>
-                  {row.price} 金
-                </button>
-              </li>
-            ))}
+            {vitals.shopStock.map((row) => {
+              const payload = tipFromShop(row);
+              const hasTip = hasTipPayload(payload);
+              return (
+                <li
+                  key={row.defId}
+                  className={`skill__row skill__row--shop ${QUALITY_CLASS[row.quality] ?? ''}${hasTip ? ' inv__item--tip' : ''}`}
+                  tabIndex={hasTip ? 0 : undefined}
+                  onMouseEnter={(e) => {
+                    if (hasTip) {
+                      placeFloatTip(e.currentTarget, payload);
+                    }
+                  }}
+                  onMouseLeave={() => setFloatTip(null)}
+                  onFocus={(e) => {
+                    if (hasTip) {
+                      placeFloatTip(e.currentTarget, payload);
+                    }
+                  }}
+                  onBlur={() => setFloatTip(null)}
+                >
+                  <span className="inv__item-name">
+                    {row.name}
+                    {row.ownedQty > 0 ? (
+                      <small className="camp__owned">已有 ×{row.ownedQty}</small>
+                    ) : null}
+                  </span>
+                  <span className="camp__buy">
+                    <button type="button" onClick={() => onBuy(row.defId, 1)}>
+                      ×1 · {row.price} 金
+                    </button>
+                    {row.canBuyBulk ? (
+                      <button type="button" onClick={() => onBuy(row.defId, 5)}>
+                        ×5 · {row.price * 5} 金
+                      </button>
+                    ) : null}
+                  </span>
+                </li>
+              );
+            })}
           </ul>
-          <h3 className="camp__sub">出售背包</h3>
+          {vitals.campOpen === 'merchant' || vitals.campOpen === 'weaponsmith' ? (
+            <>
+          <h3 className="camp__sub">
+            {vitals.campOpen === 'weaponsmith' ? '收购武器' : '出售背包'}
+          </h3>
+          {vitals.campOpen === 'merchant' ? (
+          <div className="panel__actions" style={{ marginBottom: 8 }}>
+            <button
+              type="button"
+              className="panel__primary"
+              disabled={(vitals.materialsSell?.stacks ?? 0) <= 0}
+              onClick={() => requestSellMaterials()}
+            >
+              {confirmAct?.kind === 'sell-mats'
+                ? `确认出售材料 ${vitals.materialsSell?.gold ?? 0} 金`
+                : `一键出售材料${
+                    (vitals.materialsSell?.units ?? 0) > 0
+                      ? `（${vitals.materialsSell.units} 件 · ${vitals.materialsSell.gold} 金）`
+                      : ''
+                  }`}
+            </button>
+            <button
+              type="button"
+              disabled={(vitals.commonGearSell?.stacks ?? 0) <= 0}
+              onClick={() => requestSellCommonGear()}
+            >
+              {confirmAct?.kind === 'sell-white'
+                ? `确认出售白装 ${vitals.commonGearSell?.gold ?? 0} 金`
+                : `一键出售白装${
+                    (vitals.commonGearSell?.units ?? 0) > 0
+                      ? `（${vitals.commonGearSell.units} 件 · ${vitals.commonGearSell.gold} 金）`
+                      : ''
+                  }`}
+            </button>
+            <button
+              type="button"
+              disabled={(vitals.uncommonGearSell?.stacks ?? 0) <= 0}
+              onClick={() => requestSellUncommonGear()}
+            >
+              {confirmAct?.kind === 'sell-green'
+                ? `确认出售绿装 ${vitals.uncommonGearSell?.gold ?? 0} 金`
+                : `一键出售绿装${
+                    (vitals.uncommonGearSell?.units ?? 0) > 0
+                      ? `（${vitals.uncommonGearSell.units} 件 · ${vitals.uncommonGearSell.gold} 金）`
+                      : ''
+                  }`}
+            </button>
+            <button
+              type="button"
+              disabled={(vitals.rareGearSell?.stacks ?? 0) <= 0}
+              onClick={() => requestSellRareGear()}
+            >
+              {confirmAct?.kind === 'sell-blue'
+                ? `确认出售蓝装 ${vitals.rareGearSell?.gold ?? 0} 金`
+                : `一键出售蓝装${
+                    (vitals.rareGearSell?.units ?? 0) > 0
+                      ? `（${vitals.rareGearSell.units} 件 · ${vitals.rareGearSell.gold} 金）`
+                      : ''
+                  }`}
+            </button>
+          </div>
+          ) : null}
           <ul className="skill__list">
-            {vitals.bag.map((item) => (
-              <li key={item.uid} className="skill__row">
-                <span>
-                  {item.name}
-                  {item.qty > 1 ? ` ×${item.qty}` : ''}
-                  {item.equipped ? ' · 装备中' : ''}
-                </span>
-                <button type="button" disabled={item.equipped} onClick={() => onSell(item.uid)}>
-                  卖出
-                </button>
-              </li>
-            ))}
+            {vitals.bag
+              .filter((item) => vitals.campOpen === 'merchant' || item.kind === 'gear')
+              .map((item) => {
+              const payload = tipFromBag(item);
+              const hasTip = hasTipPayload(payload);
+              return (
+                <li
+                  key={item.uid}
+                  className={`skill__row skill__row--shop ${QUALITY_CLASS[item.quality] ?? ''}${hasTip ? ' inv__item--tip' : ''}`}
+                  tabIndex={hasTip ? 0 : undefined}
+                  onMouseEnter={(e) => {
+                    if (hasTip) {
+                      placeFloatTip(e.currentTarget, payload);
+                    }
+                  }}
+                  onMouseLeave={() => setFloatTip(null)}
+                  onFocus={(e) => {
+                    if (hasTip) {
+                      placeFloatTip(e.currentTarget, payload);
+                    }
+                  }}
+                  onBlur={() => setFloatTip(null)}
+                >
+                  <span className="inv__item-name">
+                    {item.name}
+                    {item.qty > 1 ? ` ×${item.qty}` : ''}
+                    {item.equipped ? ' · 装备中' : ''}
+                  </span>
+                  <button
+                    type="button"
+                    disabled={item.equipped}
+                    onClick={() => requestSell(item.uid)}
+                  >
+                    {confirmAct?.kind === 'sell' && confirmAct.uid === item.uid
+                      ? `确认卖出 ${item.sellPrice} 金`
+                      : `卖出 ${item.sellPrice} 金`}
+                  </button>
+                </li>
+              );
+            })}
           </ul>
+            </>
+          ) : null}
           <p className="inv__hint">
             <kbd>F</kbd> / <kbd>Esc</kbd> 关闭
+            {vitals.campOpen === 'apothecary'
+              ? ' · 药水可 ×5 买入'
+              : vitals.campOpen === 'weaponsmith'
+                ? ' · 库存随等级刷新 · 可回收未装备武器'
+                : ' · 一键卖至蓝装需确认 · 紫/橙仍逐件卖'}
           </p>
         </div>
       ) : null}
@@ -623,11 +1481,31 @@ export function Hud({
         <div className="panel panel--camp">
           <header className="inv__head">
             <h2>铁匠</h2>
-            <p>强化 +{vitals.weaponEnhance}/5</p>
+            <p>
+              强化 +{vitals.weaponEnhance}/8
+              {vitals.weaponDur !== null
+                ? ` · 耐久 ${vitals.weaponDur}/${vitals.weaponMaxDur}`
+                : ''}
+            </p>
           </header>
           {vitals.campMessage ? <p className="camp__msg">{vitals.campMessage}</p> : null}
           <p className="camp__desc">
-            消耗 {vitals.enhanceCost} 金 + 1 任意材料（材料 {vitals.enhanceMats}）· 每级按武器基础攻击提升。
+            强化：消耗 {vitals.enhanceCost} 金 + 1 任意材料（材料 {vitals.enhanceMats}）
+            {vitals.weaponEnhance < 8
+              ? ` · 成功率 ${vitals.enhanceSuccessPct}%`
+              : ''}
+            · 失败只耗材料不掉级。
+          </p>
+          <p className="camp__desc">
+            修理：
+            {vitals.weaponDur === null
+              ? '先装备主手'
+              : vitals.repairCost <= 0
+                ? '主手完好'
+                : vitals.repairUsesMat
+                  ? `花费 ${vitals.repairCost} 金 + 1 材料（原价 ${vitals.repairCostFull} 金）`
+                  : `花费 ${vitals.repairCost} 金（带材料可约六折）`}
+            。死亡会损耗耐久；破损后攻击大幅下降。未装备装备可在背包分解为碎材（蓝装以上另得魔法尘）。
           </p>
           <div className="panel__actions">
             <button
@@ -636,7 +1514,19 @@ export function Hud({
               disabled={!vitals.canEnhance}
               onClick={onEnhance}
             >
-              {vitals.weaponEnhance >= 5 ? '已达上限' : '强化主手'}
+              {vitals.weaponEnhance >= 8 ? '已达上限' : '强化主手'}
+            </button>
+            <button
+              type="button"
+              className="panel__primary"
+              disabled={!vitals.canRepair}
+              onClick={onRepair}
+            >
+              {vitals.repairCost <= 0
+                ? '无需修理'
+                : vitals.repairUsesMat
+                  ? `修理（${vitals.repairCost} 金 + 材料）`
+                  : `修理（${vitals.repairCost} 金）`}
             </button>
           </div>
           <p className="inv__hint">
@@ -673,15 +1563,16 @@ export function Hud({
         <div className="panel panel--camp">
           <header className="inv__head">
             <h2>词缀试炼</h2>
-            <p>限时清光精英 · 刷强化材料</p>
+            <p>限时清精英 · 层层攀升刷材料</p>
           </header>
           {vitals.campMessage ? <p className="camp__msg">{vitals.campMessage}</p> : null}
           <p className="inv__hint">
-            {CHALLENGE_HINT}
+            最高通关：第 {vitals.challengeBestFloor} 层
           </p>
+          <p className="inv__hint">{CHALLENGE_HINT}</p>
           <div className="panel__actions">
             <button type="button" className="panel__primary" onClick={onStartChallenge}>
-              开始挑战（90 秒）
+              开始挑战（第 1 层 · {CHALLENGE_DURATION}s）
             </button>
           </div>
           <p className="inv__hint">
@@ -691,15 +1582,104 @@ export function Hud({
       ) : null}
 
       {vitals.campOpen === 'teleport' ? (
-        <div className="panel panel--camp">
+        <div className="panel panel--camp panel--worldmap">
           <header className="inv__head">
-            <h2>传送阵</h2>
+            <h2>世界地图</h2>
             <p>
-              已解锁节点
+              传送阵 · 烬营枢纽
               {vitals.ngPlusLevel > 0 ? ` · NG+${vitals.ngPlusLevel}` : ''}
             </p>
           </header>
           {vitals.campMessage ? <p className="camp__msg">{vitals.campMessage}</p> : null}
+          <div className="worldmap worldmap--hub" role="list">
+            <svg
+              className="worldmap__rays"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="none"
+              aria-hidden
+            >
+              {worldSpokes.map((node, i) => {
+                const end = worldRayEnds[i]!;
+                return (
+                  <line
+                    key={node.zoneId}
+                    x1={11}
+                    y1={50}
+                    x2={end.x}
+                    y2={end.y}
+                    className={
+                      node.unlocked ? 'worldmap__ray worldmap__ray--on' : 'worldmap__ray'
+                    }
+                  />
+                );
+              })}
+              <circle cx={11} cy={50} r={1.6} className="worldmap__ray-core" />
+            </svg>
+            <div className="worldmap__camp">
+              {worldHub ? (
+                <button
+                  type="button"
+                  role="listitem"
+                  className={[
+                    'worldmap__node',
+                    'worldmap__node--hub',
+                    worldHub.unlocked ? 'worldmap__node--open' : 'worldmap__node--locked',
+                    worldHub.current ? 'worldmap__node--here' : '',
+                    worldHub.bossCleared ? 'worldmap__node--cleared' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  disabled={!worldHub.unlocked || !worldHub.travelId}
+                  title={worldHub.lockHint}
+                  onClick={() => {
+                    if (worldHub.travelId) {
+                      onTeleport(worldHub.travelId);
+                    }
+                  }}
+                >
+                  <span className="worldmap__badge">枢纽</span>
+                  <span className="worldmap__id">A01</span>
+                  <span className="worldmap__name">烬营 · 迷雾林地</span>
+                  <span className="worldmap__lv">
+                    {worldHub.levelMin}–{worldHub.levelMax}
+                  </span>
+                  <span className="worldmap__hint">{worldHub.lockHint}</span>
+                </button>
+              ) : null}
+            </div>
+            <div className="worldmap__ring">
+              {worldSpokes.map((node) => (
+                <button
+                  key={node.zoneId}
+                  type="button"
+                  role="listitem"
+                  className={[
+                    'worldmap__node',
+                    node.unlocked ? 'worldmap__node--open' : 'worldmap__node--locked',
+                    node.current ? 'worldmap__node--here' : '',
+                    node.bossCleared ? 'worldmap__node--cleared' : '',
+                  ]
+                    .filter(Boolean)
+                    .join(' ')}
+                  disabled={!node.unlocked || !node.travelId}
+                  title={node.lockHint}
+                  onClick={() => {
+                    if (node.travelId) {
+                      onTeleport(node.travelId);
+                    }
+                  }}
+                >
+                  <span className="worldmap__id">{node.zoneId.toUpperCase()}</span>
+                  <span className="worldmap__name">{node.name}</span>
+                  <span className="worldmap__lv">
+                    {node.levelMin}–{node.levelMax}
+                  </span>
+                  <span className="worldmap__hint">{node.lockHint}</span>
+                </button>
+              ))}
+            </div>
+          </div>
+          <p className="inv__hint">区内落点</p>
           <div className="panel__actions">
             {(vitals.travelNodes ?? []).map((node, i) => (
               <button
@@ -712,16 +1692,18 @@ export function Hud({
               </button>
             ))}
             {vitals.canStartNgPlus ? (
-              <button type="button" className="panel__primary" onClick={onStartNgPlus}>
+              <button type="button" className="panel__primary panel__primary--ng" onClick={onStartNgPlus}>
                 开启新周目 NG+{(vitals.ngPlusLevel ?? 0) + 1}
               </button>
             ) : null}
           </div>
           <p className="inv__hint">
             {vitals.canStartNgPlus
-              ? 'NG+ 保留装备成长，怪物更强、掉落更好'
-              : null}
-            {vitals.canStartNgPlus ? <br /> : null}
+              ? '击败终焉君王后可用：保留装备成长，怪物更强、掉落淬炼更好；开启后烬灰披风点亮并自动存档'
+              : vitals.ngPlusLevel > 0
+                ? '烬灰披风已点亮 · 掉落装备可带周目淬炼'
+                : '烬营为枢纽 · 点击已解锁节点传送至入口；击败 BOSS 后区内落点含「门前」'}
+            <br />
             <kbd>F</kbd> / <kbd>Esc</kbd> 关闭
           </p>
         </div>

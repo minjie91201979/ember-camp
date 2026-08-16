@@ -1,18 +1,38 @@
+import { sfx } from '../../audio/sfx';
 import type { AttrKey, Dummy, Player, World } from '../types';
 import { ZONES } from '../data/zones';
+import { CLASS_DEFS } from '../data/classes';
 import { applyGearStats } from './inventory';
 import { playLevelUpFx } from './combat';
 import {
-  ATTR_LABELS,
-  WARRIOR_GROWTH,
+  attrLabelsForClass,
   previewStats,
+  PLAYER_LEVEL_CAP,
   xpForKill,
   xpToNextLevel,
 } from './stats';
 import { maybePromptSpec } from './specialization';
 
+/** 战斗中锁 C/K；暂停、营地、a01 安全区放行；脱战野外仍可开。 */
+export function canOpenBuildPanel(world: World): boolean {
+  if (world.settingsOpen || world.nearbyCamp || world.zoneId === 'a01') {
+    return true;
+  }
+  return world.player.combatT <= 0;
+}
+
+export function denyBuildPanel(world: World): void {
+  sfx.play('deny');
+  world.levelToastT = 1.4;
+  world.levelToastText = '战斗中无法打开';
+}
+
 export function toggleCharacter(world: World): void {
   if (world.player.hp <= 0) {
+    return;
+  }
+  if (!world.charOpen && !canOpenBuildPanel(world)) {
+    denyBuildPanel(world);
     return;
   }
   world.charOpen = !world.charOpen;
@@ -51,11 +71,11 @@ export function removeAttrDraft(world: World, key: AttrKey): boolean {
   return true;
 }
 
-/** 用剩余未分配点按战士推荐（3 力 1 体循环）填入草稿。 */
+/** 用剩余未分配点按职业推荐填入草稿。 */
 export function fillRecommendDraft(world: World): void {
   clearAttrDraft(world);
   let left = world.player.unspentAttr;
-  const cycle: AttrKey[] = ['str', 'str', 'str', 'vit'];
+  const cycle = CLASS_DEFS[world.player.classId].recommendCycle;
   let i = 0;
   while (left > 0) {
     const key = cycle[i % cycle.length]!;
@@ -82,7 +102,7 @@ export function applyAttrDraft(world: World): boolean {
   return true;
 }
 
-/** 相对区域等级：越级经验衰减，过低略增（便于追进度）。 */
+/** 相对区域等级：越级经验衰减，过低略增（便于追进度）。后期区扫图：超区中位 3 级起衰减，8 级起大幅衰减。 */
 export function zoneXpMult(playerLevel: number, zoneId: string): number {
   const zone = ZONES[zoneId];
   if (!zone) {
@@ -93,40 +113,103 @@ export function zoneXpMult(playerLevel: number, zoneId: string): number {
   if (delta <= 0) {
     return Math.min(1.25, 1 + Math.abs(delta) * 0.04);
   }
-  if (delta <= 4) {
+  if (delta <= 3) {
     return 1;
   }
-  return Math.max(0.15, 1 - (delta - 4) * 0.12);
+  if (delta >= 8) {
+    return Math.max(0.08, 0.28 - (delta - 8) * 0.04);
+  }
+  return Math.max(0.12, 1 - (delta - 3) * 0.11);
 }
 
 export function grantKillXp(world: World, dummy: Dummy): void {
   const p = world.player;
-  const raw = xpForKill(dummy);
-  p.xp += Math.max(1, Math.round(raw * zoneXpMult(p.level, world.zoneId)));
-  let leveled = false;
-  while (p.xp >= p.xpToNext) {
-    p.xp -= p.xpToNext;
-    levelUp(p);
-    leveled = true;
+  const raw = Math.max(1, Math.round(xpForKill(dummy) * zoneXpMult(p.level, world.zoneId)));
+  if (p.level >= PLAYER_LEVEL_CAP) {
+    // 满级：经验折算少量金币，避免白打
+    const gold = Math.max(1, Math.round(raw * 0.18));
+    world.gold += gold;
+    world.popupId += 1;
+    world.popups.push({
+      id: world.popupId,
+      x: p.x,
+      y: p.y + p.h + 0.2,
+      value: gold,
+      age: 0,
+      lethal: false,
+      crit: false,
+      kind: 'gold',
+    });
+    return;
   }
-  if (leveled) {
+  p.xp += raw;
+  world.popupId += 1;
+  world.popups.push({
+    id: world.popupId,
+    x: dummy.x,
+    y: dummy.y + dummy.h + 0.25,
+    value: raw,
+    age: 0,
+    lethal: false,
+    crit: false,
+    kind: 'xp',
+  });
+  let leveled = 0;
+  while (p.xp >= p.xpToNext && p.level < PLAYER_LEVEL_CAP) {
+    p.xp -= p.xpToNext;
+    if (!levelUp(p)) {
+      break;
+    }
+    leveled += 1;
+  }
+  if (p.level >= PLAYER_LEVEL_CAP) {
+    p.level = PLAYER_LEVEL_CAP;
+    p.xp = 0;
+    p.xpToNext = xpToNextLevel(PLAYER_LEVEL_CAP);
+  }
+  if (leveled > 0) {
     applyGearStats(p, world);
     p.hp = p.maxHp;
-    playLevelUpFx(world);
+    playLevelUpFx(world, { levels: leveled });
     maybePromptSpec(world);
   }
 }
 
-function levelUp(player: Player): void {
+/** QA / 调试：将等级推到目标（不降级）。 */
+export function forceLevelTo(world: World, targetLevel: number): void {
+  const p = world.player;
+  const from = p.level;
+  const cap = Math.max(1, Math.min(PLAYER_LEVEL_CAP, Math.floor(targetLevel)));
+  while (p.level < cap) {
+    if (!levelUp(p)) {
+      break;
+    }
+  }
+  p.xp = 0;
+  p.xpToNext = xpToNextLevel(p.level);
+  applyGearStats(p, world);
+  const gained = p.level - from;
+  if (gained > 0) {
+    playLevelUpFx(world, { levels: gained });
+  }
+  maybePromptSpec(world);
+}
+
+function levelUp(player: Player): boolean {
+  if (player.level >= PLAYER_LEVEL_CAP) {
+    return false;
+  }
   player.level += 1;
-  player.baseStr += WARRIOR_GROWTH.str;
-  player.baseAgi += WARRIOR_GROWTH.agi;
-  player.baseInt += WARRIOR_GROWTH.int;
-  player.baseVit += WARRIOR_GROWTH.vit;
-  player.baseSpi += WARRIOR_GROWTH.spi;
+  const growth = CLASS_DEFS[player.classId].growth;
+  player.baseStr += growth.str;
+  player.baseAgi += growth.agi;
+  player.baseInt += growth.int;
+  player.baseVit += growth.vit;
+  player.baseSpi += growth.spi;
   player.unspentAttr += 4;
   player.unspentSkill += 1;
   player.xpToNext = xpToNextLevel(player.level);
+  return true;
 }
 
 export function attrPanelRows(world: World): {
@@ -138,8 +221,9 @@ export function attrPanelRows(world: World): {
   draft: number;
   preview: number;
 }[] {
-  return (Object.keys(ATTR_LABELS) as AttrKey[]).map((key) => {
-    const meta = ATTR_LABELS[key];
+  const labels = attrLabelsForClass(world.player.classId);
+  return (Object.keys(labels) as AttrKey[]).map((key) => {
+    const meta = labels[key];
     const baseSpent =
       key === 'str'
         ? world.player.baseStr + world.player.spentStr

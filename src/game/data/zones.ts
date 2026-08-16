@@ -49,18 +49,19 @@ export const ZONE_A01: ZoneDef = {
   levelMax: 5,
   theme: 'woodland',
   kit: [
-    { id: 'g-camp', kind: 'ground', x: -8, y: 0, w: 15.2, h: 1 },
-    { id: 'g-mid-a', kind: 'ground', x: 9.6, y: 0, w: 7.4, h: 1 },
-    { id: 'g-mid-b', kind: 'ground', x: 19.8, y: 0, w: 6.6, h: 1 },
-    { id: 'g-end', kind: 'ground', x: 29.8, y: 0, w: 14, h: 1 },
+    // 营地加宽：容纳传送 / 试炼 / 训练 / 铁匠 / 杂货 / 药水摊
+    { id: 'g-camp', kind: 'ground', x: -10, y: 0, w: 22, h: 1 },
+    { id: 'g-mid-a', kind: 'ground', x: 14.6, y: 0, w: 7.4, h: 1 },
+    { id: 'g-mid-b', kind: 'ground', x: 24.8, y: 0, w: 6.6, h: 1 },
+    { id: 'g-end', kind: 'ground', x: 34.8, y: 0, w: 14, h: 1 },
     // 通往宝箱台的斜坡套件（上层窄台已去掉，避免挡在藤墙站立空间上方）
-    { id: 'slope-chest', kind: 'slope', x: 14.35, y: 1, w: 2.15, h: 0.32, rise: 1.15 },
-    { id: 'ledge-chest', kind: 'ledge', x: 16.2, y: 2.15, w: 2.4, h: 0.38 },
+    { id: 'slope-chest', kind: 'slope', x: 19.35, y: 1, w: 2.15, h: 0.32, rise: 1.15 },
+    { id: 'ledge-chest', kind: 'ledge', x: 21.2, y: 2.15, w: 2.4, h: 0.38 },
     // 可破坏木箱（挡路 / 藏药）
     {
       id: 'crate-ford',
       kind: 'breakable',
-      x: 14.25,
+      x: 19.25,
       y: 1,
       w: 0.7,
       h: 0.7,
@@ -70,7 +71,7 @@ export const ZONE_A01: ZoneDef = {
     {
       id: 'crate-gate',
       kind: 'breakable',
-      x: 38.4,
+      x: 43.4,
       y: 1,
       w: 0.75,
       h: 0.8,
@@ -78,35 +79,36 @@ export const ZONE_A01: ZoneDef = {
       rewardQty: 1,
     },
     // 伪装藤墙：立在台左侧入口，无碰撞，从斜坡上来可直接走进去
-    { id: 'false-moss', kind: 'secret-wall', x: 16.25, y: 2.53, w: 0.42, h: 1.35 },
-    { id: 'bg-stump', kind: 'backdrop', x: 11.2, y: 1, w: 0.6, h: 0.9 },
+    { id: 'false-moss', kind: 'secret-wall', x: 21.25, y: 2.53, w: 0.42, h: 1.35 },
+    { id: 'bg-stump', kind: 'backdrop', x: 16.2, y: 1, w: 0.6, h: 0.9 },
     // 第二秘密：中段跳台小龛
-    { id: 'ledge-alcove', kind: 'ledge', x: 27.35, y: 2.35, w: 1.6, h: 0.32 },
+    { id: 'ledge-alcove', kind: 'ledge', x: 32.35, y: 2.35, w: 1.6, h: 0.32 },
   ],
-  rivers: [{ x: 7.2, y: 0, w: 2.4, h: 1 }],
+  rivers: [{ x: 12.2, y: 0, w: 2.4, h: 1 }],
   banners: [
     { x: 2.35, y: 1 },
-    { x: 30.4, y: 1 },
+    { x: 35.4, y: 1 },
   ],
   spawns: [
-    { enemyId: 'rotwolf', x: 12.4, y: 1, patrolMin: 10.2, patrolMax: 16.4 },
-    { enemyId: 'mist-spitter', x: 20.4, y: 1, patrolMin: 19.0, patrolMax: 23.6 },
-    { enemyId: 'treant', x: 25.2, y: 1, patrolMin: 23.6, patrolMax: 27.2 },
-    { enemyId: 'blight-pod', x: 31.2, y: 1, patrolMin: 29.6, patrolMax: 33.8 },
-    { enemyId: 'treant-elite', x: 36.2, y: 1, patrolMin: 34.5, patrolMax: 38.2 },
-    { enemyId: 'rotwood', x: 41.2, y: 1, patrolMin: 39.4, patrolMax: 43.4 },
+    { enemyId: 'rotwolf', x: 17.4, y: 1, patrolMin: 15.2, patrolMax: 21.4 },
+    { enemyId: 'mist-spitter', x: 22.6, y: 1, patrolMin: 21.0, patrolMax: 24.8 },
+    { enemyId: 'mist-spitter', x: 25.4, y: 1, patrolMin: 24.0, patrolMax: 28.6 },
+    { enemyId: 'treant', x: 30.2, y: 1, patrolMin: 28.6, patrolMax: 32.2 },
+    { enemyId: 'blight-pod', x: 36.2, y: 1, patrolMin: 34.6, patrolMax: 38.8 },
+    { enemyId: 'treant-elite', x: 41.2, y: 1, patrolMin: 39.5, patrolMax: 43.2 },
+    { enemyId: 'rotwood', x: 46.2, y: 1, patrolMin: 44.4, patrolMax: 48.4 },
   ],
   secrets: [
     {
       id: 'a01-chest-ledge',
-      x: 17.05,
+      x: 22.05,
       y: 2.53,
       rewardDefId: 'relic-mist-veil',
       rewardQty: 1,
     },
     {
       id: 'a01-chest-alcove',
-      x: 28.05,
+      x: 33.05,
       y: 2.67,
       rewardDefId: 'mist-blade',
       rewardQty: 1,
@@ -161,6 +163,7 @@ export const ZONE_A02: ZoneDef = {
     { enemyId: 'mine-golem', x: 8.2, y: 1, patrolMin: 6.4, patrolMax: 10.8 },
     { enemyId: 'cave-bat', x: 15.6, y: 1, patrolMin: 13.2, patrolMax: 18.4 },
     { enemyId: 'blast-bug', x: 21.4, y: 1, patrolMin: 19.6, patrolMax: 23.8 },
+    { enemyId: 'cave-bat', x: 24.8, y: 1, patrolMin: 23.2, patrolMax: 27.0 },
     { enemyId: 'mine-golem', x: 28.6, y: 1, patrolMin: 26.4, patrolMax: 31.2 },
     { enemyId: 'mine-golem-elite', x: 33.4, y: 1, patrolMin: 31.6, patrolMax: 35.2 },
     { enemyId: 'rock-warden', x: 42.2, y: 1, patrolMin: 39.8, patrolMax: 45.2 },
@@ -221,6 +224,18 @@ export const ZONE_A03: ZoneDef = {
     },
     { id: 'bg-boat', kind: 'backdrop', x: 29.6, y: 1, w: 1.1, h: 0.85 },
     { id: 'ledge-alcove', kind: 'ledge', x: 29.0, y: 2.3, w: 1.6, h: 0.32 },
+    // 礁石跳台：中段到潮沫前的第二层节奏
+    { id: 'ledge-spray', kind: 'ledge', x: 24.6, y: 1.85, w: 1.35, h: 0.3 },
+    {
+      id: 'crate-spray',
+      kind: 'breakable',
+      x: 25.1,
+      y: 2.15,
+      w: 0.65,
+      h: 0.65,
+      rewardDefId: 'driftwood-scrap',
+      rewardQty: 1,
+    },
   ],
   rivers: [
     { x: 10, y: 0, w: 4.4, h: 1 },
@@ -234,6 +249,7 @@ export const ZONE_A03: ZoneDef = {
     { enemyId: 'sand-crab', x: 7.6, y: 1, patrolMin: 5.2, patrolMax: 10.2 },
     { enemyId: 'tide-spitter', x: 16.8, y: 1, patrolMin: 15.0, patrolMax: 20.4 },
     { enemyId: 'drowned-raider', x: 22.2, y: 1, patrolMin: 20.4, patrolMax: 24.8 },
+    { enemyId: 'tide-spitter', x: 26.8, y: 1, patrolMin: 25.2, patrolMax: 29.0 },
     { enemyId: 'sand-crab', x: 30.4, y: 1, patrolMin: 28.0, patrolMax: 33.6 },
     { enemyId: 'reef-crab-elite', x: 35.2, y: 1, patrolMin: 33.4, patrolMax: 37.4 },
     { enemyId: 'tide-crab', x: 44.2, y: 1, patrolMin: 41.2, patrolMax: 47.4 },
@@ -294,8 +310,20 @@ export const ZONE_A04: ZoneDef = {
     },
     { id: 'bg-rock', kind: 'backdrop', x: 27.8, y: 1, w: 0.9, h: 1.0 },
     { id: 'ledge-alcove', kind: 'ledge', x: 27.2, y: 2.35, w: 1.6, h: 0.32 },
+    // 灰脊断坎：中段强制短跳，拉长推进节奏
+    { id: 'ledge-ash-step', kind: 'ledge', x: 23.2, y: 1.55, w: 1.2, h: 0.28 },
+    {
+      id: 'crate-ash-step',
+      kind: 'breakable',
+      x: 23.55,
+      y: 1.85,
+      w: 0.6,
+      h: 0.6,
+      rewardDefId: 'cinder-shard',
+      rewardQty: 1,
+    },
   ],
-  rivers: [],
+  rivers: [{ x: 21.8, y: 0, w: 2.4, h: 1 }],
   banners: [
     { x: 1.5, y: 1 },
     { x: 37.2, y: 1 },
@@ -303,7 +331,8 @@ export const ZONE_A04: ZoneDef = {
   spawns: [
     { enemyId: 'ember-lizard', x: 7.4, y: 1, patrolMin: 5.0, patrolMax: 10.0 },
     { enemyId: 'ash-bandit', x: 15.2, y: 1, patrolMin: 13.0, patrolMax: 18.6 },
-    { enemyId: 'ash-spitter', x: 21.6, y: 1, patrolMin: 19.4, patrolMax: 24.0 },
+    { enemyId: 'ash-spitter', x: 21.6, y: 1, patrolMin: 19.4, patrolMax: 21.6 },
+    { enemyId: 'ash-bandit', x: 25.4, y: 1, patrolMin: 24.0, patrolMax: 27.6 },
     { enemyId: 'ember-lizard', x: 28.8, y: 1, patrolMin: 26.4, patrolMax: 32.0 },
     { enemyId: 'ember-lizard-elite', x: 34.2, y: 1, patrolMin: 32.4, patrolMax: 36.4 },
     { enemyId: 'cinder-lizard', x: 43.6, y: 1, patrolMin: 40.4, patrolMax: 47.2 },
@@ -364,6 +393,18 @@ export const ZONE_A05: ZoneDef = {
     },
     { id: 'bg-reed', kind: 'backdrop', x: 27.2, y: 1, w: 0.7, h: 1.15 },
     { id: 'ledge-alcove', kind: 'ledge', x: 26.8, y: 2.3, w: 1.6, h: 0.32 },
+    // 沼心踏脚石：第二道水沟上的短台 + 材料箱
+    { id: 'ledge-mire-step', kind: 'ledge', x: 22.6, y: 1.7, w: 1.3, h: 0.28 },
+    {
+      id: 'crate-mire-step',
+      kind: 'breakable',
+      x: 22.95,
+      y: 2.0,
+      w: 0.6,
+      h: 0.6,
+      rewardDefId: 'mire-moss',
+      rewardQty: 1,
+    },
   ],
   rivers: [
     { x: 9, y: 0, w: 3.8, h: 1 },
@@ -376,7 +417,8 @@ export const ZONE_A05: ZoneDef = {
   spawns: [
     { enemyId: 'poison-frog', x: 6.8, y: 1, patrolMin: 4.8, patrolMax: 9.2 },
     { enemyId: 'bog-wraith', x: 15.6, y: 1, patrolMin: 13.4, patrolMax: 19.0 },
-    { enemyId: 'mire-lurker', x: 21.2, y: 1, patrolMin: 19.2, patrolMax: 24.0 },
+    { enemyId: 'mire-lurker', x: 20.4, y: 1, patrolMin: 19.2, patrolMax: 21.6 },
+    { enemyId: 'bog-wraith', x: 25.6, y: 1, patrolMin: 24.4, patrolMax: 27.8 },
     { enemyId: 'poison-frog', x: 28.4, y: 1, patrolMin: 26.0, patrolMax: 31.6 },
     { enemyId: 'bog-wraith-elite', x: 33.8, y: 1, patrolMin: 32.0, patrolMax: 36.2 },
     { enemyId: 'bog-mother', x: 44.0, y: 1, patrolMin: 40.6, patrolMax: 47.6 },
@@ -437,8 +479,20 @@ export const ZONE_A06: ZoneDef = {
     },
     { id: 'bg-pine', kind: 'backdrop', x: 27.6, y: 1, w: 0.75, h: 1.3 },
     { id: 'ledge-alcove', kind: 'ledge', x: 27.0, y: 2.35, w: 1.6, h: 0.32 },
+    // 雪脊断坎：中段短跳 + 材料箱
+    { id: 'ledge-drift-step', kind: 'ledge', x: 22.4, y: 1.6, w: 1.25, h: 0.28 },
+    {
+      id: 'crate-drift-step',
+      kind: 'breakable',
+      x: 22.75,
+      y: 1.9,
+      w: 0.6,
+      h: 0.6,
+      rewardDefId: 'frost-fur',
+      rewardQty: 1,
+    },
   ],
-  rivers: [],
+  rivers: [{ x: 21.4, y: 0, w: 2.6, h: 1 }],
   banners: [
     { x: 1.5, y: 1 },
     { x: 37.4, y: 1 },
@@ -446,7 +500,8 @@ export const ZONE_A06: ZoneDef = {
   spawns: [
     { enemyId: 'frost-wolf', x: 7.2, y: 1, patrolMin: 5.0, patrolMax: 10.0 },
     { enemyId: 'ice-spitter', x: 15.4, y: 1, patrolMin: 13.0, patrolMax: 19.0 },
-    { enemyId: 'snow-brute', x: 21.4, y: 1, patrolMin: 19.2, patrolMax: 24.0 },
+    { enemyId: 'snow-brute', x: 20.6, y: 1, patrolMin: 19.2, patrolMax: 21.4 },
+    { enemyId: 'ice-spitter', x: 25.4, y: 1, patrolMin: 24.0, patrolMax: 27.4 },
     { enemyId: 'frost-wolf', x: 28.6, y: 1, patrolMin: 26.2, patrolMax: 32.0 },
     { enemyId: 'frost-wolf-elite', x: 34.0, y: 1, patrolMin: 32.2, patrolMax: 36.4 },
     { enemyId: 'frostfang', x: 44.2, y: 1, patrolMin: 40.8, patrolMax: 47.8 },
@@ -507,8 +562,20 @@ export const ZONE_A07: ZoneDef = {
     },
     { id: 'bg-rock', kind: 'backdrop', x: 28.0, y: 1, w: 0.9, h: 1.2 },
     { id: 'ledge-alcove', kind: 'ledge', x: 27.4, y: 2.35, w: 1.6, h: 0.32 },
+    // 沙脊断坎：中段短跳 + 甲壳箱
+    { id: 'ledge-canyon-step', kind: 'ledge', x: 22.2, y: 1.55, w: 1.25, h: 0.28 },
+    {
+      id: 'crate-canyon-step',
+      kind: 'breakable',
+      x: 22.55,
+      y: 1.85,
+      w: 0.6,
+      h: 0.6,
+      rewardDefId: 'dune-chitin',
+      rewardQty: 1,
+    },
   ],
-  rivers: [],
+  rivers: [{ x: 21.2, y: 0, w: 2.6, h: 1 }],
   banners: [
     { x: 1.5, y: 1 },
     { x: 37.2, y: 1 },
@@ -516,7 +583,8 @@ export const ZONE_A07: ZoneDef = {
   spawns: [
     { enemyId: 'sand-scorpion', x: 7.0, y: 1, patrolMin: 4.8, patrolMax: 9.8 },
     { enemyId: 'dune-raider', x: 15.2, y: 1, patrolMin: 12.8, patrolMax: 18.8 },
-    { enemyId: 'sand-spitter', x: 21.6, y: 1, patrolMin: 19.4, patrolMax: 24.0 },
+    { enemyId: 'sand-spitter', x: 20.6, y: 1, patrolMin: 19.4, patrolMax: 21.2 },
+    { enemyId: 'dune-raider', x: 25.2, y: 1, patrolMin: 23.8, patrolMax: 27.4 },
     { enemyId: 'sand-scorpion', x: 28.8, y: 1, patrolMin: 26.4, patrolMax: 32.2 },
     { enemyId: 'sand-scorpion-elite', x: 34.2, y: 1, patrolMin: 32.4, patrolMax: 36.6 },
     { enemyId: 'storm-scorpion', x: 44.0, y: 1, patrolMin: 40.6, patrolMax: 47.6 },
@@ -577,8 +645,20 @@ export const ZONE_A08: ZoneDef = {
     },
     { id: 'bg-pillar', kind: 'backdrop', x: 28.2, y: 1, w: 0.55, h: 1.6 },
     { id: 'ledge-alcove', kind: 'ledge', x: 27.6, y: 2.35, w: 1.6, h: 0.32 },
+    // 废墟断梁：中段短跳 + 星屑箱
+    { id: 'ledge-hall-step', kind: 'ledge', x: 22.2, y: 1.6, w: 1.25, h: 0.28 },
+    {
+      id: 'crate-hall-step',
+      kind: 'breakable',
+      x: 22.55,
+      y: 1.9,
+      w: 0.6,
+      h: 0.6,
+      rewardDefId: 'star-shard',
+      rewardQty: 1,
+    },
   ],
-  rivers: [],
+  rivers: [{ x: 21.2, y: 0, w: 2.6, h: 1 }],
   banners: [
     { x: 1.5, y: 1 },
     { x: 37.4, y: 1 },
@@ -586,7 +666,8 @@ export const ZONE_A08: ZoneDef = {
   spawns: [
     { enemyId: 'stone-idol', x: 6.8, y: 1, patrolMin: 4.6, patrolMax: 9.6 },
     { enemyId: 'arcane-wisp', x: 15.0, y: 1, patrolMin: 12.6, patrolMax: 18.8 },
-    { enemyId: 'ruin-watcher', x: 21.4, y: 1, patrolMin: 19.2, patrolMax: 24.0 },
+    { enemyId: 'ruin-watcher', x: 20.4, y: 1, patrolMin: 19.2, patrolMax: 21.2 },
+    { enemyId: 'arcane-wisp', x: 25.2, y: 1, patrolMin: 23.8, patrolMax: 27.2 },
     { enemyId: 'stone-idol', x: 28.4, y: 1, patrolMin: 26.0, patrolMax: 31.8 },
     { enemyId: 'stone-idol-elite', x: 34.0, y: 1, patrolMin: 32.2, patrolMax: 36.4 },
     { enemyId: 'golem-mage', x: 44.2, y: 1, patrolMin: 40.8, patrolMax: 47.8 },
@@ -649,6 +730,18 @@ export const ZONE_A09: ZoneDef = {
       rewardQty: 1,
     },
     { id: 'bg-idol', kind: 'backdrop', x: 27.8, y: 1, w: 0.7, h: 1.4 },
+    // 潮沟踏脚：第二道暗潮上的短台 + 墨水箱
+    { id: 'ledge-pool-step', kind: 'ledge', x: 21.6, y: 1.7, w: 1.3, h: 0.28 },
+    {
+      id: 'crate-pool-step',
+      kind: 'breakable',
+      x: 21.95,
+      y: 2.0,
+      w: 0.6,
+      h: 0.6,
+      rewardDefId: 'abyss-ink',
+      rewardQty: 1,
+    },
   ],
   rivers: [
     { x: 8.8, y: 0, w: 2.8, h: 1 },
@@ -661,7 +754,8 @@ export const ZONE_A09: ZoneDef = {
   spawns: [
     { enemyId: 'tide-cultist', x: 6.6, y: 1, patrolMin: 4.4, patrolMax: 9.2 },
     { enemyId: 'abyss-spitter', x: 14.8, y: 1, patrolMin: 12.4, patrolMax: 18.4 },
-    { enemyId: 'tentacle-spawn', x: 21.2, y: 1, patrolMin: 19.0, patrolMax: 23.8 },
+    { enemyId: 'tentacle-spawn', x: 20.2, y: 1, patrolMin: 19.0, patrolMax: 20.8 },
+    { enemyId: 'abyss-spitter', x: 25.0, y: 1, patrolMin: 23.4, patrolMax: 27.2 },
     { enemyId: 'tide-cultist', x: 28.2, y: 1, patrolMin: 25.8, patrolMax: 31.6 },
     { enemyId: 'tide-cultist-elite', x: 33.6, y: 1, patrolMin: 31.8, patrolMax: 36.0 },
     { enemyId: 'tide-lord', x: 44.4, y: 1, patrolMin: 40.6, patrolMax: 48.0 },
@@ -724,8 +818,20 @@ export const ZONE_A10: ZoneDef = {
       rewardQty: 1,
     },
     { id: 'bg-peak', kind: 'backdrop', x: 27.4, y: 1, w: 0.8, h: 1.8 },
+    // 山隘断坎：中段短跳 + 鳞片箱
+    { id: 'ledge-pass-step', kind: 'ledge', x: 21.8, y: 1.6, w: 1.25, h: 0.28 },
+    {
+      id: 'crate-pass-step',
+      kind: 'breakable',
+      x: 22.15,
+      y: 1.9,
+      w: 0.6,
+      h: 0.6,
+      rewardDefId: 'ridge-scale',
+      rewardQty: 1,
+    },
   ],
-  rivers: [],
+  rivers: [{ x: 20.8, y: 0, w: 2.6, h: 1 }],
   banners: [
     { x: 1.4, y: 1 },
     { x: 36.6, y: 1 },
@@ -733,7 +839,8 @@ export const ZONE_A10: ZoneDef = {
   spawns: [
     { enemyId: 'ridge-wyvern', x: 6.4, y: 1, patrolMin: 4.2, patrolMax: 9.0 },
     { enemyId: 'ridge-spitter', x: 14.6, y: 1, patrolMin: 12.2, patrolMax: 18.2 },
-    { enemyId: 'mountain-giant', x: 21.0, y: 1, patrolMin: 18.8, patrolMax: 23.6 },
+    { enemyId: 'mountain-giant', x: 20.0, y: 1, patrolMin: 18.8, patrolMax: 20.8 },
+    { enemyId: 'ridge-spitter', x: 24.8, y: 1, patrolMin: 23.4, patrolMax: 26.8 },
     { enemyId: 'ridge-wyvern', x: 28.0, y: 1, patrolMin: 25.6, patrolMax: 31.4 },
     { enemyId: 'mountain-giant-elite', x: 33.4, y: 1, patrolMin: 31.6, patrolMax: 35.8 },
     { enemyId: 'rockwing', x: 44.2, y: 1, patrolMin: 40.4, patrolMax: 48.0 },
@@ -796,6 +903,18 @@ export const ZONE_A11: ZoneDef = {
       rewardQty: 1,
     },
     { id: 'bg-rift', kind: 'backdrop', x: 27.2, y: 1, w: 0.65, h: 1.7 },
+    // 裂隙踏脚：第二道虚空沟上的短台 + 尘埃箱
+    { id: 'ledge-span-step', kind: 'ledge', x: 21.4, y: 1.7, w: 1.3, h: 0.28 },
+    {
+      id: 'crate-span-step',
+      kind: 'breakable',
+      x: 21.75,
+      y: 2.0,
+      w: 0.6,
+      h: 0.6,
+      rewardDefId: 'void-dust',
+      rewardQty: 1,
+    },
   ],
   rivers: [
     { x: 9.0, y: 0, w: 2.2, h: 1 },
@@ -808,7 +927,8 @@ export const ZONE_A11: ZoneDef = {
   spawns: [
     { enemyId: 'void-walker', x: 6.2, y: 1, patrolMin: 4.0, patrolMax: 8.8 },
     { enemyId: 'void-spitter', x: 14.4, y: 1, patrolMin: 12.0, patrolMax: 18.0 },
-    { enemyId: 'rift-shard', x: 20.8, y: 1, patrolMin: 18.6, patrolMax: 23.4 },
+    { enemyId: 'rift-shard', x: 20.0, y: 1, patrolMin: 18.6, patrolMax: 20.6 },
+    { enemyId: 'void-spitter', x: 24.6, y: 1, patrolMin: 23.0, patrolMax: 26.6 },
     { enemyId: 'void-walker', x: 27.8, y: 1, patrolMin: 25.4, patrolMax: 31.2 },
     { enemyId: 'void-walker-elite', x: 33.2, y: 1, patrolMin: 31.4, patrolMax: 35.6 },
     { enemyId: 'rift-warden', x: 44.0, y: 1, patrolMin: 40.2, patrolMax: 48.0 },
@@ -871,8 +991,20 @@ export const ZONE_A12: ZoneDef = {
       rewardQty: 1,
     },
     { id: 'bg-throne', kind: 'backdrop', x: 27.0, y: 1, w: 0.9, h: 2.0 },
+    // 王座前庭断坎：中段短跳 + 徽记箱
+    { id: 'ledge-court-step', kind: 'ledge', x: 21.4, y: 1.65, w: 1.3, h: 0.28 },
+    {
+      id: 'crate-court-step',
+      kind: 'breakable',
+      x: 21.75,
+      y: 1.95,
+      w: 0.6,
+      h: 0.6,
+      rewardDefId: 'throne-sigil',
+      rewardQty: 1,
+    },
   ],
-  rivers: [],
+  rivers: [{ x: 20.4, y: 0, w: 2.6, h: 1 }],
   banners: [
     { x: 1.3, y: 1 },
     { x: 36.2, y: 1 },
@@ -880,7 +1012,8 @@ export const ZONE_A12: ZoneDef = {
   spawns: [
     { enemyId: 'throne-guard', x: 6.0, y: 1, patrolMin: 3.8, patrolMax: 8.6 },
     { enemyId: 'throne-spitter', x: 14.2, y: 1, patrolMin: 11.8, patrolMax: 17.8 },
-    { enemyId: 'wraith', x: 20.6, y: 1, patrolMin: 18.4, patrolMax: 23.2 },
+    { enemyId: 'wraith', x: 19.8, y: 1, patrolMin: 18.4, patrolMax: 20.4 },
+    { enemyId: 'throne-spitter', x: 24.6, y: 1, patrolMin: 23.0, patrolMax: 26.6 },
     { enemyId: 'throne-guard', x: 27.6, y: 1, patrolMin: 25.2, patrolMax: 31.0 },
     { enemyId: 'throne-guard-elite', x: 33.0, y: 1, patrolMin: 31.2, patrolMax: 35.4 },
     { enemyId: 'end-king', x: 44.4, y: 1, patrolMin: 40.0, patrolMax: 48.2 },
@@ -914,10 +1047,12 @@ export const ZONE_CHALLENGE: ZoneDef = {
   theme: 'ashland',
   kit: [
     { id: 'g-entry', kind: 'ground', x: -2, y: 0, w: 10.0, h: 1 },
-    { id: 'g-mid', kind: 'ground', x: 10.5, y: 0, w: 9.0, h: 1 },
-    { id: 'g-end', kind: 'ground', x: 22.0, y: 0, w: 10.5, h: 1 },
+    { id: 'g-mid', kind: 'ground', x: 10.5, y: 0, w: 8.6, h: 1 },
+    { id: 'g-end', kind: 'ground', x: 22.0, y: 0, w: 11.0, h: 1 },
     { id: 'slope-ch', kind: 'slope', x: 12.8, y: 1, w: 1.8, h: 0.3, rise: 1.0 },
     { id: 'ledge-ch', kind: 'ledge', x: 14.5, y: 2.0, w: 2.0, h: 0.32 },
+    // 试炼中段断坎：强制短跳，拉开精英遭遇
+    { id: 'ledge-ch-step', kind: 'ledge', x: 19.8, y: 1.55, w: 1.2, h: 0.28 },
     {
       id: 'crate-ch',
       kind: 'breakable',
@@ -928,13 +1063,38 @@ export const ZONE_CHALLENGE: ZoneDef = {
       rewardDefId: 'woodland-scrap',
       rewardQty: 2,
     },
+    {
+      id: 'crate-ch-step',
+      kind: 'breakable',
+      x: 20.15,
+      y: 1.85,
+      w: 0.6,
+      h: 0.6,
+      rewardDefId: 'cinder-shard',
+      rewardQty: 1,
+    },
+    {
+      id: 'crate-ch-end',
+      kind: 'breakable',
+      x: 29.2,
+      y: 1,
+      w: 0.7,
+      h: 0.7,
+      rewardDefId: 'life-potion-minor',
+      rewardQty: 1,
+    },
+    { id: 'bg-ch', kind: 'backdrop', x: 26.4, y: 1, w: 0.85, h: 1.15 },
   ],
-  rivers: [],
-  banners: [{ x: 1.2, y: 1 }],
+  rivers: [{ x: 19.1, y: 0, w: 2.6, h: 1 }],
+  banners: [
+    { x: 1.2, y: 1 },
+    { x: 28.6, y: 1 },
+  ],
   spawns: [
     { enemyId: 'treant-elite', x: 6.0, y: 1, patrolMin: 4.0, patrolMax: 8.5 },
-    { enemyId: 'frost-wolf-elite', x: 15.2, y: 1, patrolMin: 12.8, patrolMax: 18.0 },
-    { enemyId: 'void-walker-elite', x: 24.5, y: 1, patrolMin: 22.0, patrolMax: 28.0 },
+    { enemyId: 'frost-wolf-elite', x: 14.8, y: 1, patrolMin: 12.4, patrolMax: 18.8 },
+    { enemyId: 'sand-scorpion-elite', x: 23.4, y: 1, patrolMin: 21.8, patrolMax: 25.6 },
+    { enemyId: 'void-walker-elite', x: 28.8, y: 1, patrolMin: 26.4, patrolMax: 31.2 },
   ],
   secrets: [],
   bossId: '',
@@ -959,11 +1119,38 @@ export const ZONES: Record<string, ZoneDef> = {
 
 export const START_ZONE_ID = 'a01';
 
+const END_WALL_W = 0.55;
+const END_WALL_H = 3.8;
+
+/** 关卡左右尽头挡墙（防掉落）。 */
+export function isZoneEndWall(plat: Rect): boolean {
+  return plat.h >= 3.2 && plat.w <= 0.7;
+}
+
+function appendZoneEndWalls(rects: Rect[]): Rect[] {
+  if (rects.length === 0) {
+    return rects;
+  }
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  for (const r of rects) {
+    minX = Math.min(minX, r.x);
+    maxX = Math.max(maxX, r.x + r.w);
+    minY = Math.min(minY, r.y);
+  }
+  return [
+    ...rects,
+    { x: minX - END_WALL_W, y: minY, w: END_WALL_W, h: END_WALL_H },
+    { x: maxX, y: minY, w: END_WALL_W, h: END_WALL_H },
+  ];
+}
+
 export function zonePlatforms(
   zone: ZoneDef,
   broken: Record<string, boolean> = {},
 ): Rect[] {
-  return expandKitCollision(zone.kit, broken);
+  return appendZoneEndWalls(expandKitCollision(zone.kit, broken));
 }
 
 export function zoneBreakableSpecs(zone: ZoneDef): KitPiece[] {

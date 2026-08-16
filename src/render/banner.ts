@@ -4,6 +4,8 @@ import { cloneRepeat, type P0Textures } from './textures';
 
 export type BannerView = {
   group: THREE.Group;
+  x: number;
+  setLit: (lit: boolean) => void;
   tick: (time: number) => void;
 };
 
@@ -46,6 +48,7 @@ export function createBanner(tex: P0Textures, x = 2.35): BannerView {
     uniforms: {
       uTime: { value: 0 },
       uMap: { value: tex.banner },
+      uLit: { value: 0 },
     },
     vertexShader: `
       uniform float uTime;
@@ -64,11 +67,13 @@ export function createBanner(tex: P0Textures, x = 2.35): BannerView {
     `,
     fragmentShader: `
       uniform sampler2D uMap;
+      uniform float uLit;
       varying vec2 vUv;
       void main() {
         vec4 c = texture2D(uMap, vUv);
         if (c.a < 0.12) discard;
-        gl_FragColor = c;
+        vec3 lit = mix(c.rgb, c.rgb * vec3(1.25, 1.12, 0.75) + vec3(0.12, 0.08, 0.02), uLit);
+        gl_FragColor = vec4(lit, c.a);
       }
     `,
   });
@@ -80,10 +85,20 @@ export function createBanner(tex: P0Textures, x = 2.35): BannerView {
   tie.position.set(0.08, 2.2, 0);
   group.add(tie);
 
+  const glow = new THREE.PointLight(PALETTE.gold, 0, 4.5, 1.4);
+  glow.position.set(0.35, 1.7, 0.4);
+  group.add(glow);
+
   group.position.set(x, 1, 0.22);
 
   return {
     group,
+    x,
+    setLit: (lit: boolean) => {
+      clothMat.uniforms.uLit!.value = lit ? 1 : 0;
+      glow.intensity = lit ? 1.35 : 0;
+      metal.emissiveIntensity = lit ? 0.45 : 0.18;
+    },
     tick: (time: number) => {
       clothMat.uniforms.uTime!.value = time;
     },

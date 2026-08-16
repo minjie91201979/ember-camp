@@ -1,4 +1,11 @@
-import { eliteAffixLabel, ELITE_AFFIX_POOL, formatEliteName, type EliteAffixId } from '../data/elite-affixes';
+import {
+  eliteAffixHintsOf,
+  eliteAffixLabel,
+  ELITE_AFFIX_POOL,
+  formatEliteName,
+  type EliteAffixId,
+} from '../data/elite-affixes';
+import { ENEMY_DEFS, type EnemyDefId } from '../data/enemy-defs';
 import type { Dummy, Hazard, World } from '../types';
 import { sfx } from '../../audio/sfx';
 
@@ -23,6 +30,32 @@ function pushHazard(world: World, spec: Omit<Hazard, 'id' | 'age' | 'struck'>): 
   });
 }
 
+/** 将指定词缀套到精英上（先按敌人表重置移速/体型，避免叠乘）。 */
+export function applyEliteAffixes(dummy: Dummy, picked: EliteAffixId[]): void {
+  if (!dummy.elite || dummy.boss) {
+    dummy.affixes = [];
+    return;
+  }
+  const def = ENEMY_DEFS[dummy.enemyId as EnemyDefId];
+  const baseName = def?.name ?? dummy.name.split(' · ')[0] ?? dummy.name;
+  if (def) {
+    dummy.moveSpeed = def.moveSpeed;
+    dummy.visualScale = def.visualScale;
+  }
+  dummy.affixes = [...picked];
+  dummy.affixCd = 1.5 + Math.random() * 1.5;
+  dummy.name = formatEliteName(baseName, picked);
+  if (picked.includes('haste')) {
+    dummy.moveSpeed *= HASTE_MOVE;
+    dummy.vx = dummy.moveSpeed * dummy.facing;
+  } else {
+    dummy.vx = dummy.moveSpeed * dummy.facing;
+  }
+  if (picked.includes('volatile') || picked.includes('vampiric')) {
+    dummy.visualScale *= 1.06;
+  }
+}
+
 /** 精英（非 BOSS）随机 1～2 条词缀；NG+ 更密，最高 3 条。 */
 export function rollAndApplyEliteAffixes(dummy: Dummy, ngPlusLevel = 0): void {
   if (!dummy.elite || dummy.boss) {
@@ -44,16 +77,7 @@ export function rollAndApplyEliteAffixes(dummy: Dummy, ngPlusLevel = 0): void {
     const idx = Math.floor(Math.random() * pool.length);
     picked.push(pool.splice(idx, 1)[0]!);
   }
-  dummy.affixes = picked;
-  dummy.affixCd = 1.5 + Math.random() * 1.5;
-  dummy.name = formatEliteName(dummy.name, picked);
-  if (picked.includes('haste')) {
-    dummy.moveSpeed *= HASTE_MOVE;
-    dummy.vx = dummy.moveSpeed * dummy.facing;
-  }
-  if (picked.includes('volatile') || picked.includes('vampiric')) {
-    dummy.visualScale *= 1.06;
-  }
+  applyEliteAffixes(dummy, picked);
 }
 
 export function stepEliteAffixes(
@@ -129,6 +153,10 @@ export function eliteLootGoldMult(dummy: Dummy): number {
 
 export function eliteAffixTags(dummy: Dummy): string[] {
   return dummy.affixes.map(eliteAffixLabel);
+}
+
+export function eliteAffixHints(dummy: Dummy): string[] {
+  return eliteAffixHintsOf(dummy.affixes);
 }
 
 function beginFrostNova(world: World, dummy: Dummy): void {

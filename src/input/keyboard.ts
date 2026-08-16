@@ -6,6 +6,8 @@ export type InputFrame = {
   attackPressed: boolean;
   slamPressed: boolean;
   bashPressed: boolean;
+  skill3Pressed: boolean;
+  skill4Pressed: boolean;
   interactPressed: boolean;
   inventoryPressed: boolean;
   characterPressed: boolean;
@@ -13,9 +15,20 @@ export type InputFrame = {
   catalogPressed: boolean;
   settingsPressed: boolean;
   potionPressed: boolean;
+  /** 蓝药快捷（T） */
+  manaPotionPressed: boolean;
   escapePressed: boolean;
   respawnBannerPressed: boolean;
   respawnCampPressed: boolean;
+  qaToggle: boolean;
+  qaHeal: boolean;
+  qaSyncLevel: boolean;
+  qaClearFoes: boolean;
+  qaWarpBoss: boolean;
+  qaUnlockAll: boolean;
+  qaNextZone: boolean;
+  qaSupply: boolean;
+  qaGod: boolean;
 };
 
 const HOLD_PREVENT = new Set([
@@ -26,6 +39,15 @@ const HOLD_PREVENT = new Set([
   'arrowleft',
   'arrowright',
   'escape',
+  'f1',
+  'f2',
+  'f3',
+  'f4',
+  'f5',
+  'f6',
+  'f7',
+  'f8',
+  'f9',
 ]);
 
 function keyIds(e: KeyboardEvent): string[] {
@@ -102,6 +124,8 @@ export class Keyboard {
       attackPressed: this.wasPressed('j', 'keyj') || this.mouseClicked,
       slamPressed: this.wasPressed('q', 'keyq'),
       bashPressed: this.wasPressed('e', 'keye'),
+      skill3Pressed: this.wasPressed('1', 'digit1', 'numpad1'),
+      skill4Pressed: this.wasPressed('2', 'digit2', 'numpad2'),
       interactPressed: this.wasPressed('f', 'keyf'),
       inventoryPressed: this.wasPressed('i', 'keyi'),
       characterPressed: this.wasPressed('c', 'keyc'),
@@ -109,9 +133,19 @@ export class Keyboard {
       catalogPressed: this.wasPressed('l', 'keyl'),
       settingsPressed: this.wasPressed('o', 'keyo'),
       potionPressed: this.wasPressed('r', 'keyr'),
+      manaPotionPressed: this.wasPressed('t', 'keyt'),
       escapePressed: this.wasPressed('escape', 'escape'),
       respawnBannerPressed: this.wasPressed('1', 'digit1', 'numpad1'),
       respawnCampPressed: this.wasPressed('2', 'digit2', 'numpad2'),
+      qaToggle: this.wasPressed('f8', 'f8'),
+      qaHeal: this.wasPressed('f1', 'f1'),
+      qaSyncLevel: this.wasPressed('f2', 'f2'),
+      qaClearFoes: this.wasPressed('f3', 'f3'),
+      qaWarpBoss: this.wasPressed('f4', 'f4'),
+      qaNextZone: this.wasPressed('f5', 'f5'),
+      qaUnlockAll: this.wasPressed('f6', 'f6'),
+      qaSupply: this.wasPressed('f7', 'f7'),
+      qaGod: this.wasPressed('f9', 'f9'),
     };
     if (consumeEdges) {
       this.pressed.clear();

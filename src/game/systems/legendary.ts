@@ -11,7 +11,14 @@ export type LegendaryCatalogEntry = {
 };
 
 /** 图鉴固定顺序（未发现显示 ???）。 */
-export const LEGENDARY_CATALOG_IDS = ['ember-maul', 'tide-buckler', 'rift-edge'] as const;
+export const LEGENDARY_CATALOG_IDS = [
+  'ember-maul',
+  'tide-buckler',
+  'rift-edge',
+  'cinder-staff',
+  'venom-longbow',
+  'nightshade-fang',
+] as const;
 
 export function equippedLegendaryEffect(world: World): LegendaryEffectId | null {
   const item = world.bag.find((it) => it.uid === world.mainhandUid);
@@ -68,6 +75,9 @@ export function legendaryDamageMult(
       return 1.4;
     }
   }
+  if (fx === 'cinder-staff' && kind === 'fireball') {
+    return 1.18;
+  }
   return 1;
 }
 
@@ -113,6 +123,30 @@ export function legendarySlamCooldownMult(world: World): number {
 
 export function legendaryCritMultBonus(world: World): number {
   return equippedLegendaryEffect(world) === 'rift-edge' ? 0.25 : 0;
+}
+
+export function legendaryFireballRadiusMult(world: World): number {
+  return equippedLegendaryEffect(world) === 'cinder-staff' ? 1.3 : 1;
+}
+
+export function legendaryFireballDamageMult(world: World): number {
+  return equippedLegendaryEffect(world) === 'cinder-staff' ? 1.18 : 1;
+}
+
+export function legendarySerpentDotMult(world: World): number {
+  return equippedLegendaryEffect(world) === 'venom-longbow' ? 1.35 : 1;
+}
+
+export function legendaryExplosiveBlastRadiusMult(world: World): number {
+  return equippedLegendaryEffect(world) === 'venom-longbow' ? 1.2 : 1;
+}
+
+export function legendaryVanishCooldownMult(world: World): number {
+  return equippedLegendaryEffect(world) === 'nightshade-fang' ? 0.8 : 1;
+}
+
+export function legendaryKidneyStunMult(world: World): number {
+  return equippedLegendaryEffect(world) === 'nightshade-fang' ? 1.25 : 1;
 }
 
 export function toggleCatalog(world: World): void {

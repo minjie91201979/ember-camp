@@ -1,18 +1,23 @@
 import { stepBoss, stepHazards } from './boss';
 import { stepBreakables } from './breakables';
 import { stepEliteAffixes } from './elite-affixes';
-import { createDummyFromSpawn, spawnEliteAffixAdd } from './enemy-spawn';
+import { createDummyFromSpawn, countAliveAdds, spawnEliteAffixAdd } from './enemy-spawn';
 import { stepEnemyBehavior, stepProjectiles } from './enemy-behaviors';
 import type { Dummy, World } from '../types';
 import type { EnemyDefId } from '../data/enemy-defs';
 
 const RESPAWN_DELAY = 12;
 const ATTACK_DURATION = 0.55;
+/** 镜头外休眠距离（世界单位） */
+const AI_SLEEP_RANGE = 26;
+/** 存活小怪（非 BOSS）软上限，抑制召唤爆炸 */
+const MAX_ALIVE_MOBS = 20;
 
 export function stepDummies(world: World, dt: number): void {
   stepHazards(world, dt);
   stepProjectiles(world, dt);
   stepBreakables(world, dt);
+  const px = world.player.x;
   for (const dummy of world.dummies) {
     dummy.flash = Math.max(0, dummy.flash - dt);
     dummy.stunT = Math.max(0, dummy.stunT - dt);
@@ -47,6 +52,14 @@ export function stepDummies(world: World, dt: number): void {
       continue;
     }
 
+    // 非 BOSS：远离玩家时休眠 AI，降低同屏压力
+    if (!dummy.boss && Math.abs(dummy.x - px) > AI_SLEEP_RANGE) {
+      dummy.vx = 0;
+      dummy.state = 'idle';
+      dummy.attackT = 0;
+      continue;
+    }
+
     if (dummy.stunT > 0) {
       dummy.state = 'idle';
       dummy.vx = 0;
@@ -56,7 +69,7 @@ export function stepDummies(world: World, dt: number): void {
     }
 
     const affixAction = stepEliteAffixes(world, dummy, dt);
-    if (affixAction?.type === 'summon') {
+    if (affixAction?.type === 'summon' && countAliveAdds(world) < MAX_ALIVE_MOBS) {
       spawnEliteAffixAdd(world, dummy);
     }
 

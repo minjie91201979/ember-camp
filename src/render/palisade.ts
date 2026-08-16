@@ -58,9 +58,9 @@ export function createPalisade(tex: P0Textures): THREE.Group {
   });
 
   const back: Array<[number, number]> = [];
-  let x = -5.1;
+  let x = -7.2;
   let i = 0;
-  while (x < 0.55) {
+  while (x < 8.8) {
     const z = -1.55 + (hash(i + 10) - 0.5) * 0.42 + (i % 2) * 0.16;
     back.push([x, z]);
     addStake(group, wood, x, z, i + 1);
@@ -72,7 +72,7 @@ export function createPalisade(tex: P0Textures): THREE.Group {
   let z = -1.35;
   let j = 40;
   while (z < 0.55) {
-    const wx = -5.15 + (hash(j) - 0.5) * 0.28 + (j % 2) * 0.1;
+    const wx = -7.25 + (hash(j) - 0.5) * 0.28 + (j % 2) * 0.1;
     wing.push([wx, z]);
     addStake(group, wood, wx, z, j);
     z += 0.22 + hash(j + 3) * 0.12;

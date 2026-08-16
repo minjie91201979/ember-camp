@@ -1,7 +1,7 @@
 import type { World } from '../types';
 import { closeCamp } from './camp';
 import { clearAttrDraft } from './attributes';
-import { closeSpecPick } from './specialization';
+import { closeSpecNodePick, closeSpecPick } from './specialization';
 
 /** 关闭所有叠加面板（死亡 / Esc / 复活时共用）。 */
 export function closeAllPanels(world: World): boolean {
@@ -11,7 +11,9 @@ export function closeAllPanels(world: World): boolean {
     world.skillOpen ||
     world.catalogOpen ||
     world.settingsOpen ||
+    world.levelUpOpen ||
     world.specPickOpen ||
+    world.specNodePickTier !== null ||
     Boolean(world.campOpen);
   if (!had) {
     return false;
@@ -21,7 +23,9 @@ export function closeAllPanels(world: World): boolean {
   world.skillOpen = false;
   world.catalogOpen = false;
   world.settingsOpen = false;
+  world.levelUpOpen = false;
   closeSpecPick(world);
+  closeSpecNodePick(world);
   closeCamp(world);
   clearAttrDraft(world);
   return true;
@@ -34,7 +38,9 @@ export function isAnyPanelOpen(world: World): boolean {
     world.skillOpen ||
     world.catalogOpen ||
     world.settingsOpen ||
+    world.levelUpOpen ||
     world.specPickOpen ||
+    world.specNodePickTier !== null ||
     Boolean(world.campOpen)
   );
 }

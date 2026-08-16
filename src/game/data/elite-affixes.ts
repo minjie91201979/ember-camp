@@ -7,14 +7,21 @@ export type EliteAffixDef = {
   name: string;
   /** 短标签，拼进敌人名 */
   tag: string;
+  /** HUD 一句提示，说明威胁 */
+  hint: string;
 };
 
 export const ELITE_AFFIX_DEFS: Record<EliteAffixId, EliteAffixDef> = {
-  haste: { id: 'haste', name: '加速', tag: '加速' },
-  frost: { id: 'frost', name: '冰霜新星', tag: '冰霜' },
-  volatile: { id: 'volatile', name: '自爆', tag: '自爆' },
-  summoner: { id: 'summoner', name: '召唤', tag: '召唤' },
-  vampiric: { id: 'vampiric', name: '吸血', tag: '吸血' },
+  haste: { id: 'haste', name: '加速', tag: '加速', hint: '移速加快，追击更凶' },
+  frost: {
+    id: 'frost',
+    name: '冰霜新星',
+    tag: '冰霜',
+    hint: '近距周期性冰环，减速并伤人',
+  },
+  volatile: { id: 'volatile', name: '自爆', tag: '自爆', hint: '死亡时近身爆炸' },
+  summoner: { id: 'summoner', name: '召唤', tag: '召唤', hint: '周期性召唤小怪助战' },
+  vampiric: { id: 'vampiric', name: '吸血', tag: '吸血', hint: '命中你时回血' },
 };
 
 export const ELITE_AFFIX_POOL: EliteAffixId[] = [
@@ -27,6 +34,14 @@ export const ELITE_AFFIX_POOL: EliteAffixId[] = [
 
 export function eliteAffixLabel(id: EliteAffixId): string {
   return ELITE_AFFIX_DEFS[id]?.tag ?? id;
+}
+
+export function eliteAffixHint(id: EliteAffixId): string {
+  return ELITE_AFFIX_DEFS[id]?.hint ?? '';
+}
+
+export function eliteAffixHintsOf(ids: EliteAffixId[]): string[] {
+  return ids.map(eliteAffixHint).filter((h) => h.length > 0);
 }
 
 export function formatEliteName(baseName: string, affixes: EliteAffixId[]): string {
