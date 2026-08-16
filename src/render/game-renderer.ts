@@ -406,7 +406,7 @@ export class GameRenderer {
     this.playerMesh.scale.set(p.facing, 1, 1);
     if (this.playerLight) {
       this.playerLight.position.set(x + p.facing * 0.35, y + 1.6, 7.2);
-      const night = 0.5 - 0.5 * Math.cos((this.clock / DAY_NIGHT.period) * Math.PI * 2);
+      const night = 1 - Math.max(0, Math.sin((this.clock / DAY_NIGHT.period) * Math.PI * 2));
       const flicker = 0.88 + Math.sin(this.clock * 17) * 0.08 + Math.sin(this.clock * 31) * 0.05;
       const levelBoost = p.levelFxT > 0 ? 1.55 + Math.sin(this.clock * 22) * 0.25 : 1;
       this.playerLight.intensity = (3.6 + night * 2.8) * flicker * levelBoost;
@@ -705,7 +705,7 @@ export class GameRenderer {
     moon.position.z = -52;
     this.scene.add(moon);
     this.moonMesh = moonGlow;
-    this.moonLayer = this.addScroll(moon, 1, 0.96, 5.6, 3.55);
+    this.moonLayer = this.addScroll(moon, 1, 0.96, 0, 1.2);
 
     const sun = new THREE.Group();
     const sunGlow = createCelestialGlow(PALETTE.sun, 2.8, 11);
@@ -715,35 +715,64 @@ export class GameRenderer {
     sun.position.z = -51;
     this.scene.add(sun);
     this.sunMesh = sunGlow;
-    this.sunLayer = this.addScroll(sun, 1, 0.96, -6.2, 3.4);
+    this.sunLayer = this.addScroll(sun, 1, 0.96, 0, 1.2);
   }
 
   private updateDayNight(dead = false): void {
     const theme = this.sceneTheme;
-    const ang = (this.clock / DAY_NIGHT.period) * Math.PI * 2;
-    const day = 0.5 + 0.5 * Math.cos(ang);
-    const sunLift = 2.4 + Math.cos(ang) * 2.2;
-    const moonLift = 2.4 - Math.cos(ang) * 2.2;
+    // 左升右落；日月错开半周，交接处短暂重叠（太阳将落时月亮已升）
+    const cycle = ((this.clock / DAY_NIGHT.period) % 1 + 1) % 1;
+    const theta = cycle * Math.PI * 2;
+    const day = Math.max(0, Math.sin(theta));
+    const spanX = 7.2;
+    const baseY = 1.2;
+    const arcH = 2.65;
+    const below = baseY - 1.6;
+    /** 可见弧长略大于半周，黄昏/黎明交接重叠 */
+    const arcLen = 0.56;
+    const horizon = baseY + 0.22;
+
+    const placeCelestial = (phase: number): { x: number; y: number } => {
+      let t = cycle - phase;
+      t = ((t % 1) + 1) % 1;
+      if (t > arcLen) {
+        return { x: spanX, y: below };
+      }
+      const u = t / arcLen;
+      return {
+        x: -spanX + u * spanX * 2,
+        y: baseY + Math.sin(u * Math.PI) * arcH,
+      };
+    };
+
+    // 月亮相位略提前：太阳将落时月亮已从左侧升起
+    const sunPos = placeCelestial(0);
+    const moonPos = placeCelestial(0.44);
     if (this.sunLayer) {
-      this.sunLayer.offsetY = sunLift;
-      this.sunLayer.offsetX = -5.4 + Math.sin(ang) * 1.6;
+      this.sunLayer.offsetX = sunPos.x;
+      this.sunLayer.offsetY = sunPos.y;
     }
     if (this.moonLayer) {
-      this.moonLayer.offsetY = moonLift;
-      this.moonLayer.offsetX = 5.2 - Math.sin(ang) * 1.6;
+      this.moonLayer.offsetX = moonPos.x;
+      this.moonLayer.offsetY = moonPos.y;
     }
+
+    const sunUp = sunPos.y > horizon;
+    const moonUp = moonPos.y > horizon;
+    const sunAmt = sunUp ? Math.max(0, (sunPos.y - baseY) / arcH) : 0;
+    const moonAmt = moonUp ? Math.max(0, (moonPos.y - baseY) / arcH) : 0;
     if (this.sunMesh) {
-      this.sunMesh.parent!.visible = sunLift > 1.2;
+      this.sunMesh.parent!.visible = sunUp;
       const sunMat = this.sunMesh.material;
       if (sunMat instanceof THREE.ShaderMaterial) {
-        sunMat.uniforms.uIntensity!.value = (0.7 + day * 0.65) * theme.sunMult;
+        sunMat.uniforms.uIntensity!.value = (0.45 + sunAmt * 0.9) * theme.sunMult;
       }
     }
     if (this.moonMesh) {
-      this.moonMesh.parent!.visible = moonLift > 1.2;
+      this.moonMesh.parent!.visible = moonUp;
       const moonMat = this.moonMesh.material;
       if (moonMat instanceof THREE.ShaderMaterial) {
-        moonMat.uniforms.uIntensity!.value = (0.5 + (1 - day) * 0.7) * theme.moonMult;
+        moonMat.uniforms.uIntensity!.value = (0.4 + moonAmt * 0.85) * theme.moonMult;
       }
     }
     if (this.sunLight) {

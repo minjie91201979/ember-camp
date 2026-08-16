@@ -309,7 +309,8 @@ export const WORLD = {
 } as const;
 
 export const DAY_NIGHT = {
-  period: 72,
+  /** 完整昼夜周期（秒）；日月各走半周 */
+  period: 144,
 } as const;
 
 type AttackKind =
