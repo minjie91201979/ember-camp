@@ -377,6 +377,87 @@ export const SPEC_NODES: SpecNodeTable = {
       n('sb-60-dr', '永夜披风', '减伤 5%', 'incoming_dr', 0.05),
     ],
   },
+  protection: {
+    20: [
+      n('pro-20-dr', '坚壁', '受到伤害降低 5%', 'incoming_dr', 0.05),
+      n('pro-20-rage', '圣光淬炼', '受击与命中回圣能 +15%', 'rage_on_hit', 0.15),
+      n('pro-20-crit', '圣裁', '暴击伤害 +8%', 'crit_mult', 0.08),
+    ],
+    30: [
+      n('pro-30-dr', '壁垒', '受到伤害降低 4%', 'incoming_dr', 0.04),
+      n('pro-30-rage', '厚积圣能', '回圣能 +12%', 'rage_on_hit', 0.12),
+      n('pro-30-crit', '裁决', '暴击伤害 +8%', 'crit_mult', 0.08),
+    ],
+    40: [
+      n('pro-40-dr', '不破圣盾', '受到伤害降低 4%', 'incoming_dr', 0.04),
+      n('pro-40-rage', '圣潮', '回圣能 +10%', 'rage_on_hit', 0.1),
+      n('pro-40-crit', '圣怒', '暴击伤害 +10%', 'crit_mult', 0.1),
+    ],
+    50: [
+      n('pro-50-dr', '王座铁卫', '受到伤害降低 5%', 'incoming_dr', 0.05),
+      n('pro-50-crit', '圣光反击', '暴击伤害 +10%', 'crit_mult', 0.1),
+      n('pro-50-rage', '不灭圣意', '回圣能 +14%', 'rage_on_hit', 0.14),
+    ],
+    60: [
+      n('pro-60-dr', '终焉壁垒', '受到伤害降低 5%', 'incoming_dr', 0.05),
+      n('pro-60-rage', '永恒圣能', '回圣能 +15%', 'rage_on_hit', 0.15),
+      n('pro-60-crit', '绝境圣裁', '暴击伤害 +10%', 'crit_mult', 0.1),
+    ],
+  },
+  retribution: {
+    20: [
+      n('ret-20-rage', '神圣狂热', '命中回圣能 +15%', 'rage_on_hit', 0.15),
+      n('ret-20-ww', '奉献领域', '奉献范围 +12%', 'whirlwind_radius', 0.12),
+      n('ret-20-crit', '圣战暴击', '暴击伤害 +10%', 'crit_mult', 0.1),
+    ],
+    30: [
+      n('ret-30-ww', '裂空奉献', '奉献范围 +10%', 'whirlwind_radius', 0.1),
+      n('ret-30-rage', '狂涌圣能', '回圣能 +12%', 'rage_on_hit', 0.12),
+      n('ret-30-exec', '审判阈值', '愤怒之锤阈值提高至 36%', 'execute_thresh', 0.36),
+    ],
+    40: [
+      n('ret-40-ww', '旋涡奉献', '奉献范围 +10%', 'whirlwind_radius', 0.1),
+      n('ret-40-crit', '圣怒一击', '暴击伤害 +10%', 'crit_mult', 0.1),
+      n('ret-40-charge', '圣光冲锋', '冲锋冷却 −10%', 'charge_cd', 0.1),
+    ],
+    50: [
+      n('ret-50-rage', '沸腾圣能', '回圣能 +14%', 'rage_on_hit', 0.14),
+      n('ret-50-ww', '审判场', '奉献范围 +12%', 'whirlwind_radius', 0.12),
+      n('ret-50-crit', '圣斩', '暴击伤害 +10%', 'crit_mult', 0.1),
+    ],
+    60: [
+      n('ret-60-ww', '末日奉献', '奉献范围 +14%', 'whirlwind_radius', 0.14),
+      n('ret-60-rage', '无尽圣火', '回圣能 +15%', 'rage_on_hit', 0.15),
+      n('ret-60-crit', '灭世圣裁', '暴击伤害 +12%', 'crit_mult', 0.12),
+    ],
+  },
+  holy: {
+    20: [
+      n('holy-20-dr', '圣盾庇护', '受到伤害降低 5%', 'incoming_dr', 0.05),
+      n('holy-20-rage', '圣光灌注', '回圣能 +12%', 'rage_on_hit', 0.12),
+      n('holy-20-crit', '圣耀', '暴击伤害 +8%', 'crit_mult', 0.08),
+    ],
+    30: [
+      n('holy-30-dr', '庇护所', '受到伤害降低 4%', 'incoming_dr', 0.04),
+      n('holy-30-rage', '圣泉', '回圣能 +10%', 'rage_on_hit', 0.1),
+      n('holy-30-crit', '圣辉', '暴击伤害 +8%', 'crit_mult', 0.08),
+    ],
+    40: [
+      n('holy-40-dr', '神恩壁垒', '受到伤害降低 4%', 'incoming_dr', 0.04),
+      n('holy-40-rage', '圣潮涌动', '回圣能 +10%', 'rage_on_hit', 0.1),
+      n('holy-40-crit', '圣怒', '暴击伤害 +10%', 'crit_mult', 0.1),
+    ],
+    50: [
+      n('holy-50-dr', '至高庇护', '受到伤害降低 5%', 'incoming_dr', 0.05),
+      n('holy-50-crit', '圣光反击', '暴击伤害 +10%', 'crit_mult', 0.1),
+      n('holy-50-rage', '不灭圣意', '回圣能 +14%', 'rage_on_hit', 0.14),
+    ],
+    60: [
+      n('holy-60-dr', '永恒圣盾', '受到伤害降低 5%', 'incoming_dr', 0.05),
+      n('holy-60-rage', '永恒圣光', '回圣能 +15%', 'rage_on_hit', 0.15),
+      n('holy-60-crit', '绝境圣裁', '暴击伤害 +10%', 'crit_mult', 0.1),
+    ],
+  },
 };
 
 const NODE_BY_ID: Record<string, SpecNodeDef> = {};

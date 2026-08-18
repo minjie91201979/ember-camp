@@ -14,6 +14,7 @@ export const ZONE_MAP_POS: Record<string, ZoneMapPos> = {
   a10: { x: 80, y: 22 },
   a11: { x: 88, y: 50 },
   a12: { x: 94, y: 40 },
+  a13: { x: 98, y: 62 },
 };
 
 /** 航线：线性解锁链（魔兽飞行点式虚线）。 */
@@ -29,4 +30,5 @@ export const ZONE_FLIGHT_EDGES: ReadonlyArray<readonly [string, string]> = [
   ['a09', 'a10'],
   ['a10', 'a11'],
   ['a11', 'a12'],
+  ['a12', 'a13'],
 ];

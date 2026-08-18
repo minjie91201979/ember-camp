@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CAMERA, DAY_NIGHT, PLAYER, attackDurationOf } from '../game/config';
+import { CAMERA, DAY_NIGHT, LIGHTING, PLAYER, attackDurationOf } from '../game/config';
 import type { PlayerClassId } from '../game/data/classes';
 import { ITEM_DEFS } from '../game/data/item-defs';
 import { DUST_LIFE, LEVEL_POPUP_LIFE, POPUP_LIFE } from '../game/systems/combat';
@@ -137,6 +137,12 @@ export class GameRenderer {
   private parallaxMountains: THREE.Object3D | null = null;
   private parallaxMid: THREE.Object3D | null = null;
   private parallaxNear: THREE.Object3D | null = null;
+  // 复用临时色，避免 updateDayNight 每帧 new THREE.Color 造成 GC 抖动。
+  private readonly tmpMoonToSun = new THREE.Color(0xfff1c8);
+  private readonly tmpFogDay = new THREE.Color();
+  private readonly tmpDeadFog = new THREE.Color(0x1a1c22);
+  private readonly tmpSkyDay = new THREE.Color();
+  private readonly tmpDeadBg = new THREE.Color(0x12141a);
   private parallaxForest: THREE.Object3D | null = null;
   private parallaxMist: THREE.Object3D | null = null;
   private skyCloudLayer: ScrollLayer | null = null;
@@ -789,18 +795,19 @@ export class GameRenderer {
       this.moonPoint.intensity = (0.25 + (1 - day) * 2.1) * theme.moonMult;
     }
     if (this.hemi) {
-      this.hemi.intensity = (0.95 + day * 0.45) * theme.hemiMult;
+      this.hemi.intensity = (0.95 + day * 0.45) * theme.hemiMult * LIGHTING.brightness;
     }
     if (this.ambient) {
-      this.ambient.intensity = (0.72 + day * 0.28) * theme.ambientMult;
+      this.ambient.intensity = (0.72 + day * 0.28) * theme.ambientMult * LIGHTING.brightness;
     }
     if (this.frontLight) {
       this.frontLight.intensity = (1.15 + day * 0.45) * theme.frontMult;
-      this.frontLight.color.setHex(PALETTE.moonlight).lerp(new THREE.Color(0xfff1c8), day);
+      this.frontLight.color.setHex(PALETTE.moonlight).lerp(this.tmpMoonToSun, day);
     }
-    this.fogColor.setHex(theme.fogNight).lerp(new THREE.Color(theme.fogDay), day);
+    this.tmpFogDay.setHex(theme.fogDay);
+    this.fogColor.setHex(theme.fogNight).lerp(this.tmpFogDay, day);
     if (dead) {
-      this.fogColor.lerp(new THREE.Color(0x1a1c22), 0.55);
+      this.fogColor.lerp(this.tmpDeadFog, 0.55);
     }
     if (this.scene.fog instanceof THREE.Fog) {
       this.scene.fog.color.copy(this.fogColor);
@@ -811,16 +818,19 @@ export class GameRenderer {
         this.scene.fog.far *= 0.78;
       }
     }
-    this.scene.background = new THREE.Color(theme.skyNight).lerp(
-      new THREE.Color(theme.skyDay),
-      day,
-    );
-    if (dead) {
-      (this.scene.background as THREE.Color).lerp(new THREE.Color(0x12141a), 0.4);
-      this.renderer.toneMappingExposure =
-        (theme.exposureBase + day * theme.exposureDayAdd) * 0.72;
+    if (this.scene.background instanceof THREE.Color) {
+      this.tmpSkyDay.setHex(theme.skyDay);
+      this.scene.background.setHex(theme.skyNight).lerp(this.tmpSkyDay, day);
     } else {
-      this.renderer.toneMappingExposure = theme.exposureBase + day * theme.exposureDayAdd;
+      this.scene.background = new THREE.Color(theme.skyNight).lerp(this.tmpSkyDay.setHex(theme.skyDay), day);
+    }
+    if (dead) {
+      (this.scene.background as THREE.Color).lerp(this.tmpDeadBg, 0.4);
+      this.renderer.toneMappingExposure =
+        (theme.exposureBase + day * theme.exposureDayAdd) * 0.72 * LIGHTING.brightness;
+    } else {
+      this.renderer.toneMappingExposure =
+        (theme.exposureBase + day * theme.exposureDayAdd) * LIGHTING.brightness;
     }
     if (this.skyMat) {
       this.skyMat.uniforms.uDay!.value = day;

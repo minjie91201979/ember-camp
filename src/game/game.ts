@@ -853,6 +853,10 @@ export class Game {
       skillEName: skillName(bar1),
       skill3Name: skillName(bar2),
       skill4Name: skillName(bar3),
+      skillQId: (bar0 as SkillId | null) ?? null,
+      skillEId: (bar1 as SkillId | null) ?? null,
+      skill3Id: (bar2 as SkillId | null) ?? null,
+      skill4Id: (bar3 as SkillId | null) ?? null,
       skillQCost: costOf(bar0),
       skillECost: costOf(bar1),
       skill3Cost: costOf(bar2),
@@ -970,6 +974,7 @@ export class Game {
           if (!def) {
             return {
               uid: it.uid,
+              defId: it.defId,
               name: it.defId,
               qty: it.qty,
               quality: 'common' as const,
@@ -1011,6 +1016,7 @@ export class Game {
           });
           return {
             uid: it.uid,
+            defId: def.id,
             name: def.name,
             qty: it.qty,
             quality: def.quality,

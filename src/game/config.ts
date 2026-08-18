@@ -313,6 +313,12 @@ export const DAY_NIGHT = {
   period: 144,
 } as const;
 
+/** 全局光照亮度调节。整体偏暗 / 看不清时调高 brightness（>1 更亮，<1 更暗）。 */
+export const LIGHTING = {
+  /** 统一作用于曝光、环境光与半球光的增益系数。1.0 = 原始亮度。 */
+  brightness: 1.5,
+} as const;
+
 type AttackKind =
   | 'basic'
   | 'slam'

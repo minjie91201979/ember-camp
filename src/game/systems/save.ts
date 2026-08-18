@@ -10,12 +10,12 @@ import { rebuildWorldPlatforms } from './breakables';
 import { xpToNextLevel, PLAYER_LEVEL_CAP } from './stats';
 import { normalizeSkillBar } from './skills';
 import { maybePromptSpecNode } from './specialization';
-import { defaultUnlockedZones, populateZone, unlockZone } from './zone-travel';
+import { BOSS_UNLOCKS, defaultUnlockedZones, populateZone, unlockZone } from './zone-travel';
 
 const SAVE_KEY = 'ember-camp-save-v1';
 
 export type SaveBlob = {
-  version: 1;
+  version: 1 | 2;
   gold: number;
   bag: InventoryItem[];
   itemUid: number;
@@ -77,7 +77,7 @@ export type SaveBlob = {
 function persistBlob(world: World): boolean {
   const p = world.player;
   const blob: SaveBlob = {
-    version: 1,
+    version: 2,
     gold: world.gold,
     bag: world.bag.map((it) => ({ ...it })),
     itemUid: world.itemUid,
@@ -153,14 +153,33 @@ export function autoSaveWorld(world: World): boolean {
   }
 }
 
+/**
+ * 存档版本迁移。未来结构变更在此集中处理，避免旧档因 version 不匹配被整档清空。
+ * 返回 null 表示无法识别的版本（直接丢弃）。
+ */
+export function migrateSave(raw: unknown): SaveBlob | null {
+  if (!raw || typeof raw !== 'object') {
+    return null;
+  }
+  const blob = raw as Partial<SaveBlob> & { version?: number };
+  if (blob.version === 2) {
+    return blob as SaveBlob;
+  }
+  if (blob.version === 1) {
+    // v1 → v2：当前无结构差异，仅升版本号；后续在此补齐缺省字段。
+    return { ...(blob as SaveBlob), version: 2 };
+  }
+  return null;
+}
+
 export function loadWorld(world: World): boolean {
   try {
     const raw = localStorage.getItem(SAVE_KEY);
     if (!raw) {
       return false;
     }
-    const blob = JSON.parse(raw) as SaveBlob;
-    if (blob.version !== 1) {
+    const blob = migrateSave(JSON.parse(raw));
+    if (!blob) {
       return false;
     }
     const p = world.player;
@@ -191,38 +210,11 @@ export function loadWorld(world: World): boolean {
     world.trapId = 0;
     world.blizzards = [];
     world.blizzardId = 0;
-    if (world.bossKills.rotwood) {
-      unlockZone(world, 'a02');
-    }
-    if (world.bossKills['rock-warden']) {
-      unlockZone(world, 'a03');
-    }
-    if (world.bossKills['tide-crab']) {
-      unlockZone(world, 'a04');
-    }
-    if (world.bossKills['cinder-lizard']) {
-      unlockZone(world, 'a05');
-    }
-    if (world.bossKills['bog-mother']) {
-      unlockZone(world, 'a06');
-    }
-    if (world.bossKills.frostfang) {
-      unlockZone(world, 'a07');
-    }
-    if (world.bossKills['storm-scorpion']) {
-      unlockZone(world, 'a08');
-    }
-    if (world.bossKills['golem-mage']) {
-      unlockZone(world, 'a09');
-    }
-    if (world.bossKills['tide-lord']) {
-      unlockZone(world, 'a10');
-    }
-    if (world.bossKills.rockwing) {
-      unlockZone(world, 'a11');
-    }
-    if (world.bossKills['rift-warden']) {
-      unlockZone(world, 'a12');
+    // 数据驱动解锁：击败 BOSS 即解锁其后续区域（与 zone-travel.BOSS_UNLOCKS 同源）。
+    for (const [bossId, nextZone] of Object.entries(BOSS_UNLOCKS)) {
+      if (world.bossKills[bossId]) {
+        unlockZone(world, nextZone);
+      }
     }
 
     const zoneId = blob.zoneId ?? START_ZONE_ID;

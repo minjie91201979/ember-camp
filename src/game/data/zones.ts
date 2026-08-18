@@ -1038,6 +1038,91 @@ export const ZONE_A12: ZoneDef = {
   hubPortal: { x: 0.9, y: 1, promptY: 3.2 },
 };
 
+/** A13 余烬祭坛 — 61–65 级；禁卫 / 怨灵 + 烬炎暴君（复用终焉君王三阶段 AI）。 */
+export const ZONE_A13: ZoneDef = {
+  id: 'a13',
+  name: '余烬祭坛',
+  levelMin: 61,
+  levelMax: 65,
+  theme: 'throne',
+  kit: [
+    { id: 'g-entry', kind: 'ground', x: -2, y: 0, w: 10.2, h: 1 },
+    { id: 'g-hall', kind: 'ground', x: 11.0, y: 0, w: 9.4, h: 1 },
+    { id: 'g-court', kind: 'ground', x: 23.2, y: 0, w: 8.2, h: 1 },
+    { id: 'g-boss', kind: 'ground', x: 34.2, y: 0, w: 15.0, h: 1 },
+    { id: 'slope-throne', kind: 'slope', x: 13.8, y: 1, w: 2.1, h: 0.3, rise: 1.2 },
+    { id: 'ledge-throne', kind: 'ledge', x: 15.8, y: 2.2, w: 2.4, h: 0.34 },
+    // 全屏裁决躲避台：安全缝不足时翻上高台
+    { id: 'ledge-safe-a', kind: 'ledge', x: 37.6, y: 2.5, w: 1.8, h: 0.32 },
+    { id: 'ledge-safe-b', kind: 'ledge', x: 42.0, y: 3.25, w: 1.65, h: 0.32 },
+    {
+      id: 'crate-throne',
+      kind: 'breakable',
+      x: 8.4,
+      y: 1,
+      w: 0.7,
+      h: 0.7,
+      rewardDefId: 'throne-sigil',
+      rewardQty: 2,
+    },
+    {
+      id: 'crate-altar',
+      kind: 'breakable',
+      x: 39.4,
+      y: 1,
+      w: 0.75,
+      h: 0.8,
+      rewardDefId: 'life-potion-minor',
+      rewardQty: 1,
+    },
+    { id: 'bg-throne', kind: 'backdrop', x: 27.0, y: 1, w: 0.9, h: 2.0 },
+    // 祭坛前庭断坎：中段短跳 + 徽记箱
+    { id: 'ledge-court-step', kind: 'ledge', x: 21.4, y: 1.65, w: 1.3, h: 0.28 },
+    {
+      id: 'crate-court-step',
+      kind: 'breakable',
+      x: 21.75,
+      y: 1.95,
+      w: 0.6,
+      h: 0.6,
+      rewardDefId: 'throne-sigil',
+      rewardQty: 1,
+    },
+  ],
+  rivers: [{ x: 20.4, y: 0, w: 2.6, h: 1 }],
+  banners: [
+    { x: 1.3, y: 1 },
+    { x: 36.2, y: 1 },
+  ],
+  spawns: [
+    { enemyId: 'throne-guard', x: 6.0, y: 1, patrolMin: 3.8, patrolMax: 8.6 },
+    { enemyId: 'throne-spitter', x: 14.2, y: 1, patrolMin: 11.8, patrolMax: 17.8 },
+    { enemyId: 'wraith', x: 19.8, y: 1, patrolMin: 18.4, patrolMax: 20.4 },
+    { enemyId: 'throne-spitter', x: 24.6, y: 1, patrolMin: 23.0, patrolMax: 26.6 },
+    { enemyId: 'throne-guard', x: 27.6, y: 1, patrolMin: 25.2, patrolMax: 31.0 },
+    { enemyId: 'throne-guard-elite', x: 33.0, y: 1, patrolMin: 31.2, patrolMax: 35.4 },
+    { enemyId: 'ember-tyrant', x: 44.4, y: 1, patrolMin: 40.0, patrolMax: 48.2 },
+  ],
+  secrets: [
+    {
+      id: 'a13-chest-ledge',
+      x: 16.9,
+      y: 2.54,
+      rewardDefId: 'guard-blade',
+      rewardQty: 1,
+    },
+    {
+      id: 'a13-chest-high',
+      x: 42.7,
+      y: 3.57,
+      rewardDefId: 'relic-throne-seal',
+      rewardQty: 1,
+    },
+  ],
+  bossId: 'ember-tyrant',
+  hubPortal: { x: 0.9, y: 1, promptY: 3.2 },
+};
+
 /** 词缀试炼 — 短关限时清精英，营地入口，不进世界地图。 */
 export const ZONE_CHALLENGE: ZoneDef = {
   id: 'challenge',
@@ -1114,6 +1199,7 @@ export const ZONES: Record<string, ZoneDef> = {
   a10: ZONE_A10,
   a11: ZONE_A11,
   a12: ZONE_A12,
+  a13: ZONE_A13,
   challenge: ZONE_CHALLENGE,
 };
 

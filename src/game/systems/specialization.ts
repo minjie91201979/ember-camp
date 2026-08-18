@@ -13,7 +13,8 @@ export type WarriorSpecId = 'guard' | 'fury' | 'arms';
 export type MageSpecId = 'fire' | 'frost' | 'arcane';
 export type HunterSpecId = 'marksmanship' | 'survival' | 'mobility';
 export type RogueSpecId = 'assassination' | 'combat' | 'subtlety';
-export type SpecId = WarriorSpecId | MageSpecId | HunterSpecId | RogueSpecId;
+export type PaladinSpecId = 'protection' | 'retribution' | 'holy';
+export type SpecId = WarriorSpecId | MageSpecId | HunterSpecId | RogueSpecId | PaladinSpecId;
 
 export type SpecDef = {
   id: SpecId;
@@ -106,6 +107,27 @@ export const ROGUE_SPECS: SpecDef[] = [
   },
 ];
 
+export const PALADIN_SPECS: SpecDef[] = [
+  {
+    id: 'protection',
+    name: '防护',
+    tag: '抗压',
+    effects: ['受伤降低 8%', '圣盾击冷却 −25%', '受击圣能 +35%'],
+  },
+  {
+    id: 'retribution',
+    name: '惩戒',
+    tag: '爆发',
+    effects: ['圣能获取 +25%', '审判 / 十字军伤害提高', '低血时攻击提高'],
+  },
+  {
+    id: 'holy',
+    name: '神圣',
+    tag: '辅助',
+    effects: ['护盾更厚', '圣光祝福减伤增强', '生命回复提升'],
+  },
+];
+
 export function specsForClass(classId: string): SpecDef[] {
   if (classId === 'mage') {
     return MAGE_SPECS;
@@ -119,6 +141,9 @@ export function specsForClass(classId: string): SpecDef[] {
   if (classId === 'warrior') {
     return WARRIOR_SPECS;
   }
+  if (classId === 'paladin') {
+    return PALADIN_SPECS;
+  }
   return [];
 }
 
@@ -131,13 +156,20 @@ export function specDef(id: string | null): SpecDef | null {
     MAGE_SPECS.find((s) => s.id === id) ??
     HUNTER_SPECS.find((s) => s.id === id) ??
     ROGUE_SPECS.find((s) => s.id === id) ??
+    PALADIN_SPECS.find((s) => s.id === id) ??
     null
   );
 }
 
 export function needsSpecPick(world: World): boolean {
   const cls = world.player.classId;
-  if (cls !== 'warrior' && cls !== 'mage' && cls !== 'hunter' && cls !== 'rogue') {
+  if (
+    cls !== 'warrior' &&
+    cls !== 'mage' &&
+    cls !== 'hunter' &&
+    cls !== 'rogue' &&
+    cls !== 'paladin'
+  ) {
     return false;
   }
   return world.player.level >= 10 && !world.specId;
@@ -331,7 +363,7 @@ export function chargeCooldownOf(world: World): number {
 
 export function bashCooldownOf(world: World): number {
   const base = PLAYER.bashCooldown;
-  return world.specId === 'guard' ? base * 0.75 : base;
+  return world.specId === 'guard' || world.specId === 'protection' ? base * 0.75 : base;
 }
 
 export function blinkCooldownOf(world: World): number {
@@ -414,10 +446,10 @@ export function frostNovaStunOf(world: World): number {
 export function rageGainMult(world: World, source: 'hit' | 'hurt' | 'slam'): number {
   const id = world.specId;
   let m = 1;
-  if (id === 'fury' && (source === 'hit' || source === 'slam')) {
+  if ((id === 'fury' || id === 'retribution') && (source === 'hit' || source === 'slam')) {
     m *= 1.25;
   }
-  if (id === 'guard' && source === 'hurt') {
+  if ((id === 'guard' || id === 'protection') && source === 'hurt') {
     m *= 1.35;
   }
   if (source === 'hit' || source === 'slam' || source === 'hurt') {

@@ -4,12 +4,15 @@ import { CONTROL_HELP } from '../game/data/controls';
 import { ZONE_FLIGHT_EDGES, ZONE_MAP_POS } from '../game/data/world-map-layout';
 import { PLAYER_LEVEL_CAP } from '../game/systems/stats';
 import { CHALLENGE_DURATION, challengeDurationOf } from '../game/systems/challenge';
-import type { AttrKey, BagSnapshotItem, CampShopRow, HudSnapshot, RespawnChoice } from '../game/types';
+import type { AttrKey, BagSnapshotItem, CampShopRow, HudSnapshot, ItemKind, ItemQuality, RespawnChoice } from '../game/types';
+import { ItemIcon, SkillIcon } from './item-icon';
 import './hud.css';
 
 type ItemTipPayload = {
   name: string;
-  quality: string;
+  quality: ItemQuality;
+  defId: string | null;
+  kind: ItemKind;
   stats: string[];
   traits: string[];
   detail: string | null;
@@ -72,6 +75,8 @@ type HudProps = {
 
 type SkillSlot = {
   key: string;
+  /** 槽位技能 id；空槽为 null */
+  id: string | null;
   name: string;
   ready: boolean;
   cdRatio: number;
@@ -168,6 +173,7 @@ export function Hud({
   const slots: SkillSlot[] = [
     {
       key: 'Q',
+      id: vitals.skillQId ?? null,
       name: vitals.skillQName ?? '猛击',
       ready: vitals.slamCd <= 0 && vitals.rage >= (vitals.skillQCost ?? 0),
       cdRatio: vitals.slamCd / Math.max(0.01, vitals.skillQCdMax ?? PLAYER.slamCooldown),
@@ -180,6 +186,7 @@ export function Hud({
     },
     {
       key: 'E',
+      id: vitals.skillEId ?? null,
       name: vitals.skillEName ?? '盾击',
       ready: vitals.bashCd <= 0 && vitals.rage >= (vitals.skillECost ?? PLAYER.bashCost),
       cdRatio: vitals.bashCd / Math.max(0.01, vitals.skillECdMax ?? PLAYER.bashCooldown),
@@ -192,6 +199,7 @@ export function Hud({
     },
     {
       key: '1',
+      id: vitals.skill3Id ?? null,
       name: vitals.skill3Name ?? '空',
       ready:
         Boolean(vitals.skill3Name && vitals.skill3Name !== '空') &&
@@ -207,6 +215,7 @@ export function Hud({
     },
     {
       key: '2',
+      id: vitals.skill4Id ?? null,
       name: vitals.skill4Name ?? '空',
       ready:
         Boolean(vitals.skill4Name && vitals.skill4Name !== '空') &&
@@ -222,6 +231,7 @@ export function Hud({
     },
     {
       key: 'R',
+      id: null,
       name:
         (vitals.lifePotionCount ?? 0) > 0
           ? `红药×${vitals.lifePotionCount}`
@@ -236,6 +246,7 @@ export function Hud({
     },
     {
       key: 'T',
+      id: null,
       name:
         (vitals.manaPotionCount ?? 0) > 0
           ? `蓝药×${vitals.manaPotionCount}`
@@ -295,6 +306,8 @@ export function Hud({
   const tipFromBag = (item: BagSnapshotItem): ItemTipPayload => ({
     name: item.name,
     quality: item.quality,
+    defId: item.defId,
+    kind: item.kind,
     stats: item.stats ?? [],
     traits: item.traits ?? [],
     detail: item.detail ?? item.desc,
@@ -304,6 +317,8 @@ export function Hud({
   const tipFromShop = (row: CampShopRow): ItemTipPayload => ({
     name: row.name,
     quality: row.quality,
+    defId: row.defId,
+    kind: row.kind,
     stats: row.stats ?? [],
     traits: row.traits ?? [],
     detail: row.flavor ?? row.detail,
@@ -685,6 +700,11 @@ export function Hud({
                 slot.tone === 'mana' ? ' hud__slot--mana' : ''
               }`}
             >
+              {slot.id ? (
+                <SkillIcon id={slot.id} size={38} className="hud__slot-icon" title={slot.name} />
+              ) : (
+                <span className="hud__slot-icon hud__slot-icon--empty" />
+              )}
               {slot.cdRatio > 0 ? (
                 <i className="hud__slot-cd" style={{ height: `${Math.min(1, slot.cdRatio) * 100}%` }} />
               ) : null}
@@ -785,7 +805,10 @@ export function Hud({
               </button>
             </div>
             <p>
-              {vitals.bag.length}/{vitals.bagCap ?? 40} · 金币 {vitals.gold}
+              {vitals.bag.length}/{vitals.bagCap ?? 40} ·{' '}
+              <span className="inv__gold">
+                <ItemIcon subject="gold" quality="legendary" size={15} /> {vitals.gold}
+              </span>
               {(vitals.bagSlotsLeft ?? 99) <= 2 && (vitals.bagSlotsLeft ?? 0) > 0
                 ? ` · 将满（剩 ${vitals.bagSlotsLeft}）`
                 : ''}
@@ -815,6 +838,13 @@ export function Hud({
                   }}
                   onBlur={() => setFloatTip(null)}
                 >
+                  <ItemIcon
+                    defId={item.defId}
+                    kind={item.kind}
+                    quality={item.quality}
+                    size={34}
+                    className="item-icon"
+                  />
                   <div className="inv__item-body">
                     <strong className="inv__item-name">
                       {item.name}
@@ -867,7 +897,15 @@ export function Hud({
           role="tooltip"
           style={{ left: floatTip.left, top: floatTip.top }}
         >
-          <strong className="inv__float-tip-name">{floatTip.payload.name}</strong>
+          <div className="inv__float-tip-head">
+            <ItemIcon
+              defId={floatTip.payload.defId}
+              kind={floatTip.payload.kind}
+              quality={floatTip.payload.quality}
+              size={40}
+            />
+            <strong className="inv__float-tip-name">{floatTip.payload.name}</strong>
+          </div>
           {floatTip.payload.stats.length > 0 ? (
             <ul className="inv__stats">
               {floatTip.payload.stats.map((line) => (
@@ -1226,6 +1264,7 @@ export function Hud({
                 key={skill.id}
                 className={`skill__row${!skill.learned ? ' skill__row--locked' : ''}${skill.upcoming ? ' skill__row--upcoming' : ''}${skill.barLabel ? ' skill__row--onbar' : ''}`}
               >
+                <SkillIcon id={skill.id} size={32} className="skill__row-icon" title={skill.name} />
                 <div>
                   <b>
                     {skill.name}
@@ -1306,7 +1345,11 @@ export function Hud({
                   ? '武器商人'
                   : '杂货商人'}
             </h2>
-            <p>金币 {vitals.gold}</p>
+            <p>
+              <span className="inv__gold">
+                <ItemIcon subject="gold" quality="legendary" size={15} /> {vitals.gold}
+              </span>
+            </p>
           </header>
           {vitals.campMessage ? <p className="camp__msg">{vitals.campMessage}</p> : null}
           <h3 className="camp__sub">购买</h3>
@@ -1332,6 +1375,13 @@ export function Hud({
                   }}
                   onBlur={() => setFloatTip(null)}
                 >
+                  <ItemIcon
+                    defId={row.defId}
+                    kind={row.kind}
+                    quality={row.quality}
+                    size={32}
+                    className="item-icon"
+                  />
                   <span className="inv__item-name">
                     {row.name}
                     {row.ownedQty > 0 ? (
@@ -1438,6 +1488,13 @@ export function Hud({
                   }}
                   onBlur={() => setFloatTip(null)}
                 >
+                  <ItemIcon
+                    defId={item.defId}
+                    kind={item.kind}
+                    quality={item.quality}
+                    size={32}
+                    className="item-icon"
+                  />
                   <span className="inv__item-name">
                     {item.name}
                     {item.qty > 1 ? ` ×${item.qty}` : ''}

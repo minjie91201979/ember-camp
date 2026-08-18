@@ -1,5 +1,6 @@
 import type { EliteAffixId } from './data/elite-affixes';
 import type { PlayerClassId } from './data/classes';
+import type { SkillId } from './systems/skills';
 
 export type { PlayerClassId };
 
@@ -370,6 +371,8 @@ export type ItemCompareLine = {
 
 export type BagSnapshotItem = {
   uid: number;
+  /** 物品定义 id（用于图标/查询精确数据） */
+  defId: string;
   name: string;
   qty: number;
   quality: ItemQuality;
@@ -496,6 +499,11 @@ export type HudSnapshot = {
   skillEName: string;
   skill3Name: string;
   skill4Name: string;
+  /** 技能栏槽位对应技能 id（用于图标渲染；空槽为 null）。 */
+  skillQId: SkillId | null;
+  skillEId: SkillId | null;
+  skill3Id: SkillId | null;
+  skill4Id: SkillId | null;
   skillQCost: number;
   skillECost: number;
   skill3Cost: number;

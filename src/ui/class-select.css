@@ -6,22 +6,27 @@
   align-items: center;
   justify-content: center;
   pointer-events: auto;
+  padding: 1.5rem 1rem;
+  overflow: auto;
   background:
-    radial-gradient(ellipse at 30% 20%, rgba(110, 156, 154, 0.18), transparent 55%),
-    radial-gradient(ellipse at 70% 80%, rgba(196, 92, 62, 0.16), transparent 50%),
-    linear-gradient(160deg, #12181e 0%, #1a242c 55%, #0f1418 100%);
+    radial-gradient(ellipse at 28% 18%, rgba(196, 92, 62, 0.2), transparent 52%),
+    radial-gradient(ellipse at 76% 82%, rgba(47, 182, 160, 0.14), transparent 50%),
+    linear-gradient(160deg, #11161c 0%, #1a242c 55%, #0e1318 100%);
 }
 
-.class-select__panel {
-  width: min(920px, 94%);
-  padding: 1.6rem 1.4rem 1.4rem;
+.class-select__stage {
+  width: min(960px, 100%);
   text-align: center;
+}
+
+.class-select__head {
+  margin-bottom: 1.2rem;
 }
 
 .class-select__kicker {
   margin: 0;
   font-size: 0.75rem;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
   color: #9aada8;
 }
@@ -35,26 +40,212 @@
 }
 
 .class-select__lead {
-  margin: 0 0 1.25rem;
+  margin: 0;
   color: #c9d4d8;
   font-size: 0.95rem;
 }
 
-.class-select__grid {
+.class-select__main {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.85rem;
+  grid-template-columns: 190px minmax(0, 1fr) 300px;
+  gap: 1.1rem;
+  text-align: left;
+  align-items: stretch;
+}
+
+/* 中：3D 模型展示 */
+.class-select__model {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 400px;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 14px;
+  background:
+    radial-gradient(ellipse at 50% 82%, color-mix(in srgb, var(--accent) 20%, transparent), transparent 60%),
+    radial-gradient(ellipse at 50% 20%, rgba(255, 255, 255, 0.04), transparent 55%),
+    rgba(18, 24, 30, 0.82);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25), 0 18px 44px -30px var(--accent);
+  overflow: hidden;
+}
+
+.class-select__model .class-select__preview {
+  position: relative;
+  flex: 1;
+  height: auto;
+  min-height: 380px;
+  margin: 0;
+  border-radius: 0;
+  overflow: hidden;
+}
+
+.class-select__model-hint {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 10px;
+  text-align: center;
+  font-size: 0.72rem;
+  letter-spacing: 0.06em;
+  color: color-mix(in srgb, var(--accent) 75%, #9aada8);
+  pointer-events: none;
+}
+
+/* 右：属性信息 */
+.class-select__detail {
+  display: flex;
+  flex-direction: column;
+  padding: 1rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent);
+  border-radius: 14px;
+  background: rgba(18, 24, 30, 0.82);
+  box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.25), 0 18px 40px -28px var(--accent);
+}
+
+.class-select__crest {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.class-select__name {
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.class-select__badge {
+  font-size: 0.7rem;
+  letter-spacing: 0.05em;
+  padding: 0.1rem 0.45rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent);
+}
+
+.class-select__tag {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: #9aada8;
+}
+
+.class-select__res {
+  display: inline-block;
+  margin-top: 0.6rem;
+  padding: 0.22rem 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 55%, transparent);
+  border-radius: 999px;
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  color: var(--accent);
+  align-self: flex-start;
+}
+
+.class-select__attrs {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.class-select__attr {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  font-size: 0.78rem;
+}
+
+.class-select__attr-label {
+  width: 2rem;
+  flex: none;
+  color: #9aada8;
+}
+
+.class-select__attr-track {
+  flex: 1;
+  height: 6px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.08);
+  overflow: hidden;
+}
+
+.class-select__attr-fill {
+  display: block;
+  height: 100%;
+  border-radius: 3px;
+  background: var(--accent);
+}
+
+.class-select__attr-val {
+  width: 1.4rem;
+  flex: none;
+  text-align: right;
+  color: #e8eaed;
+}
+
+.class-select__meta {
+  margin-top: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #9aada8;
+  line-height: 1.5;
+}
+
+.class-select__meta-k {
+  margin-right: 0.4rem;
+}
+
+.class-select__meta-v {
+  color: #e8eaed;
+}
+
+.class-select__enter {
+  margin-top: 1rem;
+  padding: 0.6rem 1rem;
+  border: none;
+  border-radius: 9px;
+  background: var(--accent);
+  color: #14181d;
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: filter 0.15s ease, transform 0.15s ease;
+}
+
+.class-select__enter:hover,
+.class-select__enter:focus-visible {
+  outline: none;
+  filter: brightness(1.08);
+  transform: translateY(-1px);
+}
+
+/* 左：职业名册（头像 + 名称） */
+.class-select__roster {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 0.55rem;
+}
+
+.class-select__roster-title {
+  margin: 0 0 0.1rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: #7e8f95;
 }
 
 .class-select__card {
   display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  gap: 0.35rem;
-  padding: 1.1rem 1rem;
-  border: 1px solid rgba(201, 212, 216, 0.22);
-  border-radius: 10px;
-  background: rgba(18, 24, 30, 0.72);
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.45rem 0.55rem;
+  border: 1px solid rgba(201, 212, 216, 0.16);
+  border-radius: 11px;
+  background: rgba(18, 24, 30, 0.7);
   color: #f4f6f5;
   cursor: pointer;
   text-align: left;
@@ -62,45 +253,38 @@
 }
 
 .class-select__card:hover,
-.class-select__card:focus-visible {
+.class-select__card:focus-visible,
+.class-select__card.is-active {
   outline: none;
-  transform: translateY(-2px);
-  border-color: rgba(212, 165, 116, 0.7);
-  background: rgba(26, 36, 44, 0.9);
+  transform: translateX(3px);
+  border-color: var(--accent);
+  background: rgba(26, 36, 44, 0.92);
+  box-shadow: 0 8px 24px -18px var(--accent);
 }
 
-.class-select__card--warrior {
-  box-shadow: inset 0 0 0 1px rgba(196, 92, 62, 0.12);
+.class-select__card-icon {
+  flex: none;
+  border-radius: 8px;
+  filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.4));
 }
 
-.class-select__card--mage {
-  box-shadow: inset 0 0 0 1px rgba(110, 156, 154, 0.16);
-}
-
-.class-select__card--hunter {
-  box-shadow: inset 0 0 0 1px rgba(139, 106, 74, 0.2);
-}
-
-.class-select__card--rogue {
-  box-shadow: inset 0 0 0 1px rgba(90, 83, 96, 0.28);
-}
-
-.class-select__name {
-  font-size: 1.25rem;
+.class-select__card-name {
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95rem;
   font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
 }
 
-.class-select__tag {
-  font-size: 0.85rem;
-  color: #9aada8;
-  line-height: 1.35;
-}
-
-.class-select__res {
-  margin-top: 0.35rem;
-  font-size: 0.75rem;
-  letter-spacing: 0.06em;
-  color: #d4a574;
+.class-select__card-new {
+  font-size: 0.62rem;
+  font-weight: 600;
+  padding: 0.05rem 0.32rem;
+  border: 1px solid var(--accent);
+  border-radius: 4px;
+  color: var(--accent);
 }
 
 .class-select__continue {
@@ -111,6 +295,8 @@
   background: transparent;
   color: #c9d4d8;
   cursor: pointer;
+  font: inherit;
+  font-size: 0.9rem;
 }
 
 .class-select__continue:hover,
@@ -202,8 +388,33 @@
   color: #f0d0c0 !important;
 }
 
-@media (max-width: 720px) {
-  .class-select__grid {
+@media (max-width: 900px) {
+  .class-select__main {
     grid-template-columns: 1fr;
+  }
+  .class-select__roster {
+    flex-direction: row;
+    overflow-x: auto;
+    padding-bottom: 0.2rem;
+  }
+  .class-select__roster-title {
+    display: none;
+  }
+  .class-select__card {
+    flex: none;
+    flex-direction: column;
+    gap: 0.35rem;
+    padding: 0.55rem 0.7rem;
+  }
+  .class-select__card:hover,
+  .class-select__card:focus-visible,
+  .class-select__card.is-active {
+    transform: translateY(-2px);
+  }
+  .class-select__model {
+    min-height: 0;
+  }
+  .class-select__model .class-select__preview {
+    min-height: 260px;
   }
 }

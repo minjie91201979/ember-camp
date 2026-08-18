@@ -21,6 +21,7 @@ export const BOSS_UNLOCKS: Record<string, string> = {
   'tide-lord': 'a10',
   rockwing: 'a11',
   'rift-warden': 'a12',
+  'end-king': 'a13',
 };
 
 export type TravelNode = {
@@ -60,6 +61,7 @@ export const WORLD_MAP_ZONE_IDS = [
   'a10',
   'a11',
   'a12',
+  'a13',
 ] as const;
 
 const ZONE_ENTRY_TRAVEL: Record<string, string> = {
@@ -75,6 +77,7 @@ const ZONE_ENTRY_TRAVEL: Record<string, string> = {
   a10: 'a10-entry',
   a11: 'a11-entry',
   a12: 'a12-entry',
+  a13: 'a13-entry',
 };
 
 /** 击败该区 BOSS 后解锁的「门前」落点（约在禁锢门一侧，可从营地直达刷 BOSS） */
@@ -94,6 +97,7 @@ const ZONE_BOSS_FRONT: Record<
   a10: { travelId: 'a10-boss', bossId: 'rockwing', x: 36.2, y: 1.15 },
   a11: { travelId: 'a11-boss', bossId: 'rift-warden', x: 36.0, y: 1.15 },
   a12: { travelId: 'a12-boss', bossId: 'end-king', x: 36.4, y: 1.15 },
+  a13: { travelId: 'a13-boss', bossId: 'ember-tyrant', x: 36.4, y: 1.15 },
 };
 
 export function isBossFrontUnlocked(world: World, zoneId: string): boolean {
@@ -118,6 +122,7 @@ const ZONE_REQUIRE_BOSS: Record<string, string> = {
   a10: 'tide-lord',
   a11: 'rockwing',
   a12: 'rift-warden',
+  a13: 'end-king',
 };
 
 export function defaultUnlockedZones(): string[] {
@@ -410,6 +415,25 @@ export function listTravelNodes(world: World): TravelNode[] {
         id: 'a12-mid',
         label: '王座前厅',
         zoneId: 'a12',
+        x: 15.7,
+        y: 1.15,
+        localOnly: true,
+      },
+    );
+  }
+  if (isZoneUnlocked(world, 'a13')) {
+    nodes.push(
+      {
+        id: 'a13-entry',
+        label: '余烬祭坛',
+        zoneId: 'a13',
+        x: 1.2,
+        y: 1.15,
+      },
+      {
+        id: 'a13-mid',
+        label: '祭坛前庭',
+        zoneId: 'a13',
         x: 15.7,
         y: 1.15,
         localOnly: true,

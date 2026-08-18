@@ -301,7 +301,7 @@ export function applyPlayerHit(world: World, dummy: Dummy, kind: AttackKind = 'b
     kind === 'slam' ? 1.25 : kind === 'bash' || kind === 'eviscerate' ? 1.05 : 0.45;
   world.shake = Math.max(world.shake, crit ? Math.max(shake, 1.1) : shake);
   spawnPopup(world, dummy.x, dummy.y + dummy.h + 0.2, value, dummy.hp <= 0, crit);
-  if (player.classId === 'warrior') {
+  if (player.classId === 'warrior' || player.classId === 'paladin') {
     const rageBase = kind === 'slam' ? PLAYER.rageOnSlam : PLAYER.rageOnHit;
     const rageSrc = kind === 'slam' ? 'slam' : 'hit';
     addRage(player, rageBase * rageGainMult(world, rageSrc));

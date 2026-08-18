@@ -64,7 +64,8 @@ export type EnemyDefId =
   | 'wraith'
   | 'throne-spitter'
   | 'throne-guard-elite'
-  | 'end-king';
+  | 'end-king'
+  | 'ember-tyrant';
 
 export type EnemyDef = {
   id: EnemyDefId;
@@ -1149,6 +1150,24 @@ export const ENEMY_DEFS: Record<EnemyDefId, EnemyDef> = {
     visualScale: 2.0,
     lootTable: 'a12-boss',
     xp: 1600,
+    elite: false,
+    boss: true,
+    noRespawn: true,
+  },
+  'ember-tyrant': {
+    id: 'ember-tyrant',
+    kind: 'treant',
+    name: '余烬暴君',
+    behavior: 'melee',
+    hp: 1820,
+    atk: 70,
+    def: 58,
+    moveSpeed: 0.82,
+    w: 2.0,
+    h: 2.85,
+    visualScale: 2.05,
+    lootTable: 'a12-boss',
+    xp: 1750,
     elite: false,
     boss: true,
     noRespawn: true,

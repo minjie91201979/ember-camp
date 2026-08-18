@@ -569,6 +569,21 @@
   position: relative;
 }
 
+.hud__slot-icon {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 0;
+  width: 38px;
+  height: 38px;
+  pointer-events: none;
+}
+
+.hud__slot-icon--empty {
+  border: 1px dashed #39424a;
+  border-radius: 10px;
+}
+
 .hud__slot-sec {
   position: absolute;
   top: 50%;
@@ -964,6 +979,21 @@ kbd {
   min-width: 0;
 }
 
+.item-icon {
+  flex: none;
+  display: inline-flex;
+  vertical-align: middle;
+}
+
+.inv__gold {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  vertical-align: middle;
+  font-weight: 600;
+  color: #f0c069;
+}
+
 .inv__item-name {
   display: block;
   font-weight: 600;
@@ -991,6 +1021,18 @@ kbd {
   margin-bottom: 6px;
   color: #f4f6f5;
   font-size: 13px;
+}
+
+.inv__float-tip-head {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.inv__float-tip-head .inv__float-tip-name {
+  margin-bottom: 0;
+  padding-top: 3px;
+  line-height: 1.35;
 }
 
 .inv__compare {
@@ -1178,6 +1220,16 @@ kbd {
   padding: 8px 10px;
   border: 1px solid #2c3338;
   background: #12181e;
+}
+
+.skill__row-icon {
+  flex: none;
+  display: inline-flex;
+}
+
+.skill__row > div {
+  flex: 1;
+  min-width: 0;
 }
 
 .skill__row--shop.inv__item--common {

@@ -53,7 +53,7 @@ import {
   toggleCatalog,
 } from './legendary';
 import { toggleCharacter } from './attributes';
-import { isSkillId, skillLevelOf, type SkillId, toggleSkills } from './skills';
+import { isSkillId, SKILL_DEFS, skillLevelOf, skillResourceCost, type SkillId, toggleSkills } from './skills';
 import { applyDeathLootLoss, stepLoot, stepLootFlies } from './loot';
 import { closeCamp, syncCampProximity, syncHubPortalProximity, tryOpenCamp, tryOpenHubPortal } from './camp';
 import { closeAllPanels, isAnyPanelOpen } from './ui-panels';
@@ -510,283 +510,37 @@ function tryCastBarSlot(world: World, player: Player, slot: number): boolean {
     return false;
   }
   const id: SkillId = raw;
-  if (id === 'slam') {
-    beginAttack(world, player, 'slam', slot);
-    return true;
+  const def = SKILL_DEFS[id];
+  const kind = def.kind;
+  // 占位技能（utility）不可施放
+  if (kind === 'utility') {
+    world.levelToastT = 1.2;
+    world.levelToastText = '该技能即将开放';
+    sfx.play('deny');
+    return false;
   }
-  if (id === 'bash') {
-    if (!spendRage(player, legendaryBashCost(world))) {
-      player.rageWarnT = 0.8;
-      world.levelToastT = 1.2;
-      world.levelToastText = '怒气不足，无法盾击';
-      sfx.play('deny');
-      return false;
-    }
-    beginAttack(world, player, 'bash', slot);
-    return true;
+  // 连击点前置：盗贼部分技能
+  if (
+    (kind === 'eviscerate' || kind === 'kidney-shot' || kind === 'slice-and-dice') &&
+    player.comboPoints <= 0
+  ) {
+    world.levelToastT = 1.2;
+    world.levelToastText = `需要连击点才能${def.name}`;
+    sfx.play('deny');
+    return false;
   }
-  if (id === 'fireball') {
-    if (!spendRage(player, PLAYER.fireballCost)) {
-      denyMana(world, player, '火球');
-      return false;
-    }
-    beginAttack(world, player, 'fireball', slot);
-    return true;
-  }
-  if (id === 'frost-nova') {
-    if (!spendRage(player, PLAYER.frostNovaCost)) {
-      denyMana(world, player, '冰霜新星');
-      return false;
-    }
-    beginAttack(world, player, 'frost-nova', slot);
-    return true;
-  }
-  if (id === 'arcane-missiles') {
-    if (!spendRage(player, PLAYER.arcaneMissilesCost)) {
-      denyMana(world, player, '奥术飞弹');
-      return false;
-    }
-    beginAttack(world, player, 'arcane-missiles', slot);
-    return true;
-  }
-  if (id === 'blink') {
-    if (!spendRage(player, PLAYER.blinkCost)) {
-      denyResource(world, player, '闪现');
-      return false;
-    }
-    beginAttack(world, player, 'blink', slot);
-    return true;
-  }
-  if (id === 'aimed-shot') {
-    if (!spendRage(player, PLAYER.aimedShotCost)) {
-      denyResource(world, player, '瞄准射击');
-      return false;
-    }
-    beginAttack(world, player, 'aimed-shot', slot);
-    return true;
-  }
-  if (id === 'disengage') {
-    if (!spendRage(player, PLAYER.disengageCost)) {
-      denyResource(world, player, '后跳射击');
-      return false;
-    }
-    beginAttack(world, player, 'disengage', slot);
-    return true;
-  }
-  if (id === 'multi-shot') {
-    if (!spendRage(player, PLAYER.multiShotCost)) {
-      denyResource(world, player, '多重射击');
-      return false;
-    }
-    beginAttack(world, player, 'multi-shot', slot);
-    return true;
-  }
-  if (id === 'trap') {
-    if (!spendRage(player, PLAYER.trapCost)) {
-      denyResource(world, player, '捕兽夹');
-      return false;
-    }
-    beginAttack(world, player, 'trap', slot);
-    return true;
-  }
-  if (id === 'shadow-strike') {
-    if (!spendRage(player, PLAYER.shadowStrikeCost)) {
-      denyResource(world, player, '影袭');
-      return false;
-    }
-    beginAttack(world, player, 'shadow-strike', slot);
-    return true;
-  }
-  if (id === 'eviscerate') {
-    if (player.comboPoints <= 0) {
-      world.levelToastT = 1.2;
-      world.levelToastText = '需要连击点才能刺骨';
-      sfx.play('deny');
-      return false;
-    }
-    if (!spendRage(player, PLAYER.eviscerateCost)) {
-      denyResource(world, player, '刺骨');
-      return false;
-    }
-    beginAttack(world, player, 'eviscerate', slot);
-    return true;
-  }
-  if (id === 'poison-blade') {
-    if (!spendRage(player, PLAYER.poisonBladeCost)) {
-      denyResource(world, player, '毒刃');
-      return false;
-    }
-    beginAttack(world, player, 'poison-blade', slot);
-    return true;
-  }
-  if (id === 'sprint') {
-    if (!spendRage(player, PLAYER.sprintCost)) {
-      denyResource(world, player, '疾跑');
-      return false;
-    }
-    beginAttack(world, player, 'sprint', slot);
-    return true;
-  }
-  if (id === 'vanish') {
-    if (!spendRage(player, PLAYER.vanishCost)) {
-      denyResource(world, player, '消失');
-      return false;
-    }
-    beginAttack(world, player, 'vanish', slot);
-    return true;
-  }
-  if (id === 'blizzard') {
-    if (!spendRage(player, PLAYER.blizzardCost)) {
-      denyResource(world, player, '暴风雪');
-      return false;
-    }
-    beginAttack(world, player, 'blizzard', slot);
-    return true;
-  }
-  if (id === 'rapid-fire') {
-    if (!spendRage(player, PLAYER.rapidFireCost)) {
-      denyResource(world, player, '急速射击');
-      return false;
-    }
-    beginAttack(world, player, 'rapid-fire', slot);
-    return true;
-  }
-  if (id === 'pyroblast') {
-    if (!spendRage(player, PLAYER.pyroblastCost)) {
-      denyResource(world, player, '炎爆术');
-      return false;
-    }
-    beginAttack(world, player, 'pyroblast', slot);
-    return true;
-  }
-  if (id === 'explosive-trap') {
-    if (!spendRage(player, PLAYER.explosiveTrapCost)) {
-      denyResource(world, player, '爆炸陷阱');
-      return false;
-    }
-    beginAttack(world, player, 'explosive-trap', slot);
-    return true;
-  }
-  if (id === 'ice-lance') {
-    if (!spendRage(player, PLAYER.iceLanceCost)) {
-      denyResource(world, player, '冰枪术');
-      return false;
-    }
-    beginAttack(world, player, 'ice-lance', slot);
-    return true;
-  }
-  if (id === 'concussive-shot') {
-    if (!spendRage(player, PLAYER.concussiveCost)) {
-      denyResource(world, player, '震荡射击');
-      return false;
-    }
-    beginAttack(world, player, 'concussive-shot', slot);
-    return true;
-  }
-  if (id === 'mana-shield') {
-    if (!player.manaShieldOn && !spendRage(player, PLAYER.manaShieldCost)) {
-      denyResource(world, player, '法力护盾');
-      return false;
-    }
+  // 法力护盾：已开启则切换关闭，不耗资源
+  if (kind === 'mana-shield' && player.manaShieldOn) {
     beginAttack(world, player, 'mana-shield', slot);
     return true;
   }
-  if (id === 'serpent-sting') {
-    if (!spendRage(player, PLAYER.serpentStingCost)) {
-      denyResource(world, player, '毒箭');
-      return false;
-    }
-    beginAttack(world, player, 'serpent-sting', slot);
-    return true;
+  const cost = kind === 'bash' ? legendaryBashCost(world) : skillResourceCost(id);
+  if (!spendRage(player, cost)) {
+    denyResource(world, player, def.name);
+    return false;
   }
-  if (id === 'charge') {
-    if (!spendRage(player, PLAYER.chargeCost)) {
-      denyResource(world, player, '冲锋');
-      return false;
-    }
-    beginAttack(world, player, 'charge', slot);
-    return true;
-  }
-  if (id === 'whirlwind') {
-    if (!spendRage(player, PLAYER.whirlwindCost)) {
-      denyResource(world, player, '旋风斩');
-      return false;
-    }
-    beginAttack(world, player, 'whirlwind', slot);
-    return true;
-  }
-  if (id === 'execute') {
-    if (!spendRage(player, PLAYER.executeCost)) {
-      denyResource(world, player, '斩杀');
-      return false;
-    }
-    beginAttack(world, player, 'execute', slot);
-    return true;
-  }
-  if (id === 'battle-shout') {
-    if (!spendRage(player, PLAYER.battleShoutCost)) {
-      denyResource(world, player, '战吼');
-      return false;
-    }
-    beginAttack(world, player, 'battle-shout', slot);
-    return true;
-  }
-  if (id === 'sunder') {
-    if (!spendRage(player, PLAYER.sunderCost)) {
-      denyResource(world, player, '破甲斩');
-      return false;
-    }
-    beginAttack(world, player, 'sunder', slot);
-    return true;
-  }
-  if (id === 'cleave') {
-    if (!spendRage(player, PLAYER.cleaveCost)) {
-      denyResource(world, player, '顺劈');
-      return false;
-    }
-    beginAttack(world, player, 'cleave', slot);
-    return true;
-  }
-  if (id === 'kidney-shot') {
-    if (player.comboPoints <= 0) {
-      world.levelToastT = 1.2;
-      world.levelToastText = '需要连击点才能肾击';
-      sfx.play('deny');
-      return false;
-    }
-    if (!spendRage(player, PLAYER.kidneyShotCost)) {
-      denyResource(world, player, '肾击');
-      return false;
-    }
-    beginAttack(world, player, 'kidney-shot', slot);
-    return true;
-  }
-  if (id === 'slice-and-dice') {
-    if (player.comboPoints <= 0) {
-      world.levelToastT = 1.2;
-      world.levelToastText = '需要连击点才能切割';
-      sfx.play('deny');
-      return false;
-    }
-    if (!spendRage(player, PLAYER.sliceAndDiceCost)) {
-      denyResource(world, player, '切割');
-      return false;
-    }
-    beginAttack(world, player, 'slice-and-dice', slot);
-    return true;
-  }
-  if (id === 'fan-of-knives') {
-    if (!spendRage(player, PLAYER.fanOfKnivesCost)) {
-      denyResource(world, player, '刀扇');
-      return false;
-    }
-    beginAttack(world, player, 'fan-of-knives', slot);
-    return true;
-  }
-  world.levelToastT = 1.2;
-  world.levelToastText = '该技能即将开放';
-  sfx.play('deny');
-  return false;
+  beginAttack(world, player, kind, slot);
+  return true;
 }
 
 function denyResource(world: World, player: Player, name: string): void {
@@ -799,13 +553,11 @@ function denyResource(world: World, player: Player, name: string): void {
         ? '集中'
         : player.classId === 'rogue'
           ? '能量'
-          : '怒气';
+          : player.classId === 'paladin'
+            ? '圣能'
+            : '怒气';
   world.levelToastText = `${label}不足，无法施放${name}`;
   sfx.play('deny');
-}
-
-function denyMana(world: World, player: Player, name: string): void {
-  denyResource(world, player, name);
 }
 
 function beginAttack(world: World, player: Player, kind: AttackKind, slot: number): void {

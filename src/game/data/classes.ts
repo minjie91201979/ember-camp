@@ -1,4 +1,4 @@
-export type PlayerClassId = 'warrior' | 'mage' | 'hunter' | 'rogue';
+export type PlayerClassId = 'warrior' | 'mage' | 'hunter' | 'rogue' | 'paladin';
 
 export type ClassDef = {
   id: PlayerClassId;
@@ -82,11 +82,26 @@ export const CLASS_DEFS: Record<PlayerClassId, ClassDef> = {
     weaponAtk: 7,
     armorDef: 4,
   },
+  paladin: {
+    id: 'paladin',
+    name: '圣骑士',
+    tagline: '圣能近战 · 审判与圣盾',
+    resourceLabel: '圣能',
+    maxResource: 100,
+    base: { str: 13, agi: 6, int: 5, vit: 11, spi: 6 },
+    growth: { str: 2, agi: 0, int: 0, vit: 2, spi: 0 },
+    starterSpent: { str: 3, agi: 0, int: 0, vit: 1, spi: 0 },
+    recommendCycle: ['str', 'str', 'str', 'vit'],
+    starterWeapon: 'apprentice-sword',
+    starterPotions: [{ defId: 'life-potion-minor', qty: 5 }],
+    weaponAtk: 8,
+    armorDef: 7,
+  },
 };
 
 export function isPlayerClassId(value: unknown): value is PlayerClassId {
   return (
-    value === 'warrior' || value === 'mage' || value === 'hunter' || value === 'rogue'
+    value === 'warrior' || value === 'mage' || value === 'hunter' || value === 'rogue' || value === 'paladin'
   );
 }
 

@@ -349,7 +349,40 @@ export function createPlayerRig(classId: PlayerClassId): WarriorRig {
   if (classId === 'rogue') {
     return createRogueRig();
   }
+  if (classId === 'paladin') {
+    return createPaladinRig();
+  }
   return createWarriorRig();
+}
+
+/** 圣骑士：在战士骨架上做金蓝配色重映射（复用同一套战斗姿态）。 */
+export function createPaladinRig(): WarriorRig {
+  const rig = createWarriorRig();
+  const recolor = (m: THREE.MeshStandardMaterial, color: number, emit = 0): void => {
+    m.color.setHex(color);
+    m.emissive.setHex(color);
+    m.emissiveIntensity = emit;
+    m.userData.baseEmit = emit;
+    m.userData.baseEmitColor = color;
+  };
+  // rig.mats = [armor, dark, iron, gold, cloth, blade]
+  recolor(rig.mats[0], 0x3a6ea5, 0.08); // 钢蓝护甲
+  recolor(rig.mats[1], 0x274472, 0); // 深蓝底甲
+  recolor(rig.mats[2], 0xb9c7d6, 0.12); // 亮钢护腿
+  recolor(rig.mats[3], PALETTE.gold, 0.16); // 金饰更亮
+  recolor(rig.mats[4], 0x8fb8e0, 0.05); // 浅蓝布甲
+  recolor(rig.mats[5], PALETTE.moonlight, 0.08); // 淡蓝刃
+  const cloak = rig.cloakMat;
+  if (cloak.uniforms.uColor?.value instanceof THREE.Color) {
+    cloak.uniforms.uColor.value.setHex(0x8fb8e0);
+  }
+  if (cloak.uniforms.uTrim?.value instanceof THREE.Color) {
+    cloak.uniforms.uTrim.value.setHex(PALETTE.gold);
+  }
+  if (cloak.uniforms.uDark?.value instanceof THREE.Color) {
+    cloak.uniforms.uDark.value.setHex(0x274472);
+  }
+  return rig;
 }
 
 /** 盗贼：皮甲剪影 + 匕首。 */

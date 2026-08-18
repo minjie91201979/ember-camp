@@ -41,7 +41,15 @@ export type SkillId =
   | 'vanish'
   | 'kidney-shot'
   | 'slice-and-dice'
-  | 'fan-of-knives';
+  | 'fan-of-knives'
+  | 'judgment'
+  | 'shield-of-light'
+  | 'crusader-strike'
+  | 'consecration'
+  | 'hammer-of-wrath'
+  | 'blessing'
+  | 'exorcism'
+  | 'divine-storm';
 
 export type SkillDef = {
   name: string;
@@ -310,6 +318,70 @@ export const SKILL_DEFS: Record<SkillId, SkillDef> = {
     classId: 'rogue',
     implemented: true,
   },
+  judgment: {
+    name: '审判',
+    reqLevel: 1,
+    kind: 'slam',
+    desc: '圣光猛击，生成圣能',
+    classId: 'paladin',
+    implemented: true,
+  },
+  'shield-of-light': {
+    name: '圣盾击',
+    reqLevel: 1,
+    kind: 'bash',
+    desc: '消耗圣能，短硬直',
+    classId: 'paladin',
+    implemented: true,
+  },
+  'crusader-strike': {
+    name: '十字军打击',
+    reqLevel: 4,
+    kind: 'charge',
+    desc: '向前突进撞击',
+    classId: 'paladin',
+    implemented: true,
+  },
+  consecration: {
+    name: '奉献',
+    reqLevel: 8,
+    kind: 'whirlwind',
+    desc: '身周神圣 AoE',
+    classId: 'paladin',
+    implemented: true,
+  },
+  'hammer-of-wrath': {
+    name: '愤怒之锤',
+    reqLevel: 12,
+    kind: 'execute',
+    desc: '目标低血时高伤',
+    classId: 'paladin',
+    implemented: true,
+  },
+  blessing: {
+    name: '圣光祝福',
+    reqLevel: 16,
+    kind: 'battle-shout',
+    desc: '短时提高攻击与护甲',
+    classId: 'paladin',
+    implemented: true,
+  },
+  exorcism: {
+    name: '驱邪',
+    reqLevel: 20,
+    kind: 'sunder',
+    desc: '降低目标防御',
+    classId: 'paladin',
+    implemented: true,
+  },
+  'divine-storm': {
+    name: '神圣风暴',
+    reqLevel: 24,
+    kind: 'cleave',
+    desc: '主目标 + 身后弧线',
+    classId: 'paladin',
+    implemented: true,
+  },
 };
 
 export const SKILL_BAR_SIZE = 4;
@@ -329,6 +401,9 @@ export function starterSkillIds(classId: PlayerClassId): SkillId[] {
   }
   if (classId === 'rogue') {
     return ['shadow-strike', 'eviscerate'];
+  }
+  if (classId === 'paladin') {
+    return ['judgment', 'shield-of-light'];
   }
   return ['slam', 'bash'];
 }
@@ -354,94 +429,26 @@ export function isSkillLearned(world: World, id: SkillId): boolean {
   return skillLevelOf(world, id) > 0;
 }
 
+/**
+ * 玩家本职业里对应 kind 的「已学」技能（用于取等级倍率）。
+ * 数据驱动：每个 kind 在当前职业内至多对应一个已学技能，
+ * 因此圣骑士复用战士 kind（如 judgment→slam）也能正确取到自己的技能等级。
+ */
+function learnedSkillForKind(world: World, kind: AttackKind): SkillId | null {
+  for (const id of skillsForClass(world.player.classId)) {
+    if (SKILL_DEFS[id].kind === kind && skillLevelOf(world, id) > 0) {
+      return id;
+    }
+  }
+  return null;
+}
+
 export function skillMultForAttack(world: World, kind: AttackKind): number {
-  if (kind === 'slam') {
-    return skillLevelMult(skillLevelOf(world, 'slam'));
+  const id = learnedSkillForKind(world, kind);
+  if (!id) {
+    return 1;
   }
-  if (kind === 'bash') {
-    return skillLevelMult(skillLevelOf(world, 'bash'));
-  }
-  if (kind === 'fireball') {
-    return skillLevelMult(skillLevelOf(world, 'fireball'));
-  }
-  if (kind === 'frost-nova') {
-    return skillLevelMult(skillLevelOf(world, 'frost-nova'));
-  }
-  if (kind === 'arcane-missiles') {
-    return skillLevelMult(skillLevelOf(world, 'arcane-missiles'));
-  }
-  if (kind === 'aimed-shot' || kind === 'disengage') {
-    return skillLevelMult(
-      skillLevelOf(world, kind === 'aimed-shot' ? 'aimed-shot' : 'disengage'),
-    );
-  }
-  if (kind === 'multi-shot') {
-    return skillLevelMult(skillLevelOf(world, 'multi-shot'));
-  }
-  if (kind === 'trap') {
-    return skillLevelMult(skillLevelOf(world, 'trap'));
-  }
-  if (kind === 'shadow-strike') {
-    return skillLevelMult(skillLevelOf(world, 'shadow-strike'));
-  }
-  if (kind === 'eviscerate') {
-    return skillLevelMult(skillLevelOf(world, 'eviscerate'));
-  }
-  if (kind === 'poison-blade') {
-    return skillLevelMult(skillLevelOf(world, 'poison-blade'));
-  }
-  if (kind === 'blizzard') {
-    return skillLevelMult(skillLevelOf(world, 'blizzard'));
-  }
-  if (kind === 'rapid-fire') {
-    return skillLevelMult(skillLevelOf(world, 'rapid-fire'));
-  }
-  if (kind === 'pyroblast') {
-    return skillLevelMult(skillLevelOf(world, 'pyroblast'));
-  }
-  if (kind === 'explosive-trap') {
-    return skillLevelMult(skillLevelOf(world, 'explosive-trap'));
-  }
-  if (kind === 'ice-lance') {
-    return skillLevelMult(skillLevelOf(world, 'ice-lance'));
-  }
-  if (kind === 'concussive-shot') {
-    return skillLevelMult(skillLevelOf(world, 'concussive-shot'));
-  }
-  if (kind === 'mana-shield') {
-    return skillLevelMult(skillLevelOf(world, 'mana-shield'));
-  }
-  if (kind === 'serpent-sting') {
-    return skillLevelMult(skillLevelOf(world, 'serpent-sting'));
-  }
-  if (kind === 'charge') {
-    return skillLevelMult(skillLevelOf(world, 'charge'));
-  }
-  if (kind === 'whirlwind') {
-    return skillLevelMult(skillLevelOf(world, 'whirlwind'));
-  }
-  if (kind === 'execute') {
-    return skillLevelMult(skillLevelOf(world, 'execute'));
-  }
-  if (kind === 'battle-shout') {
-    return skillLevelMult(skillLevelOf(world, 'battle-shout'));
-  }
-  if (kind === 'sunder') {
-    return skillLevelMult(skillLevelOf(world, 'sunder'));
-  }
-  if (kind === 'cleave') {
-    return skillLevelMult(skillLevelOf(world, 'cleave'));
-  }
-  if (kind === 'kidney-shot') {
-    return skillLevelMult(skillLevelOf(world, 'kidney-shot'));
-  }
-  if (kind === 'slice-and-dice') {
-    return skillLevelMult(skillLevelOf(world, 'slice-and-dice'));
-  }
-  if (kind === 'fan-of-knives') {
-    return skillLevelMult(skillLevelOf(world, 'fan-of-knives'));
-  }
-  return 1;
+  return skillLevelMult(skillLevelOf(world, id));
 }
 
 export function upgradeCost(currentLevel: number): number {
@@ -564,6 +571,14 @@ export function skillResourceCost(id: SkillId): number {
     'kidney-shot': PLAYER.kidneyShotCost,
     'slice-and-dice': PLAYER.sliceAndDiceCost,
     'fan-of-knives': PLAYER.fanOfKnivesCost,
+    judgment: 0,
+    'shield-of-light': PLAYER.bashCost,
+    'crusader-strike': PLAYER.chargeCost,
+    consecration: PLAYER.whirlwindCost,
+    'hammer-of-wrath': PLAYER.executeCost,
+    blessing: PLAYER.battleShoutCost,
+    exorcism: PLAYER.sunderCost,
+    'divine-storm': PLAYER.cleaveCost,
   };
   return map[id] ?? 0;
 }
@@ -602,6 +617,14 @@ export function skillCooldownSec(id: SkillId): number {
     'kidney-shot': PLAYER.kidneyShotCooldown,
     'slice-and-dice': PLAYER.sliceAndDiceCooldown,
     'fan-of-knives': PLAYER.fanOfKnivesCooldown,
+    judgment: PLAYER.slamCooldown,
+    'shield-of-light': PLAYER.bashCooldown,
+    'crusader-strike': PLAYER.chargeCooldown,
+    consecration: PLAYER.whirlwindCooldown,
+    'hammer-of-wrath': PLAYER.executeCooldown,
+    blessing: PLAYER.battleShoutCooldown,
+    exorcism: PLAYER.sunderCooldown,
+    'divine-storm': PLAYER.cleaveCooldown,
   };
   return map[id] ?? 0;
 }

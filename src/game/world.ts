@@ -70,7 +70,7 @@ export function createPlayer(classId: PlayerClassId = 'warrior'): Player {
     critMult: 1.5,
     hp: 1,
     maxHp: 1,
-    rage: classId === 'mage' || classId === 'hunter' || classId === 'rogue' ? cls.maxResource : PLAYER.bashCost,
+    rage: classId === 'mage' || classId === 'hunter' || classId === 'rogue' || classId === 'paladin' ? cls.maxResource : PLAYER.bashCost,
     maxRage: cls.maxResource,
     combatT: 0,
     rageWarnT: 0,

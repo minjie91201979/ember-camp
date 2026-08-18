@@ -150,6 +150,9 @@ export function stepBoss(world: World, dummy: Dummy, dt: number): boolean {
   if (dummy.enemyId === 'end-king') {
     return stepEndKing(world, dummy, dt);
   }
+  if (dummy.enemyId === 'ember-tyrant') {
+    return stepEndKing(world, dummy, dt);
+  }
   return stepRotwood(world, dummy, dt);
 }
 
