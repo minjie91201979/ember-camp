@@ -60,6 +60,7 @@ import {
 import { createChallengePortal } from './challenge-portal';
 import { createTeleport, type TeleportView } from './teleport';
 import { cloneRepeat, loadP0Textures, type P0Textures } from './textures';
+import { WeatherView } from './weather';
 
 type DummyView = {
   root: THREE.Group;
@@ -182,6 +183,7 @@ export class GameRenderer {
   >();
   private fogColor = new THREE.Color(PALETTE.dayFog);
   private sceneTheme = sceneThemeOf('woodland');
+  private readonly weather = new WeatherView();
   private zoneGroup: THREE.Group | null = null;
   private bossGate: THREE.Group | null = null;
   private width = 1;
@@ -209,6 +211,7 @@ export class GameRenderer {
     this.camera.lookAt(2, CAMERA.lookY, 0);
 
     this.addLights();
+    this.scene.add(this.weather.group);
   }
 
   async load(): Promise<void> {
@@ -278,6 +281,7 @@ export class GameRenderer {
     const tex = this.requireTex();
     this.clearZone();
     this.sceneTheme = sceneThemeOf(world.kitTheme);
+    this.weather.setTheme(this.sceneTheme.id);
     this.applyParallaxTheme(this.sceneTheme);
     const root = new THREE.Group();
     root.name = 'zone';
@@ -576,6 +580,16 @@ export class GameRenderer {
     }
     this.syncBossGate(world);
 
+    this.weather.update(dt, this.camPos.x, this.camPos.y, this.camera);
+    if (this.weather.stormFactor > 0) {
+      const s = this.weather.stormFactor;
+      if (this.scene.fog instanceof THREE.Fog) {
+        this.scene.fog.near *= 1 - 0.32 * s;
+        this.scene.fog.far *= 1 - 0.22 * s;
+      }
+      this.renderer.toneMappingExposure *= 1 - 0.16 * s;
+    }
+
     this.renderer.render(this.scene, this.camera);
   }
 
@@ -617,6 +631,7 @@ export class GameRenderer {
   }
 
   dispose(): void {
+    this.weather.dispose();
     this.renderer.dispose();
   }
 
