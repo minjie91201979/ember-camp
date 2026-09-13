@@ -412,8 +412,6 @@
   margin: 8px 12px 12px;
   padding: 0;
   list-style: none;
-  max-height: min(36vh, 280px);
-  overflow: auto;
 }
 
 .settings__keys li {
@@ -906,16 +904,19 @@ kbd {
   top: 72px;
   right: 28px;
   z-index: 3;
+  display: flex;
+  flex-direction: column;
   width: 320px;
   max-height: calc(100% - 96px);
   padding: 16px 18px;
-  overflow: auto;
+  overflow: hidden;
   border: 1px solid #2c3338;
   background: rgb(18 24 30 / 94%);
 }
 
 .inv__head {
   display: flex;
+  flex-shrink: 0;
   flex-direction: column;
   gap: 6px;
   margin-bottom: 12px;
@@ -926,6 +927,39 @@ kbd {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.inv__head-tools {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+}
+
+.panel__close {
+  cursor: pointer;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 1px solid #3d4a42;
+  background: #1a242c;
+  color: #c9d4d8;
+  font: inherit;
+  font-size: 18px;
+  line-height: 1;
+}
+
+.panel__close:hover,
+.panel__close:focus-visible {
+  border-color: #d4a574;
+  color: #d4a574;
+}
+
+.panel__close--float {
+  position: absolute;
+  top: 10px;
+  right: 10px;
 }
 
 .inv__head h2 {
@@ -1130,8 +1164,6 @@ kbd {
   margin: 0;
   padding: 0;
   list-style: none;
-  max-height: 360px;
-  overflow: auto;
 }
 
 .inv__item--common {
@@ -1167,7 +1199,10 @@ kbd {
 .inv__item-actions {
   display: flex;
   flex-shrink: 0;
+  flex-wrap: wrap;
   gap: 6px;
+  justify-content: flex-end;
+  align-items: center;
 }
 
 .inv__item button.inv__discard {
@@ -1181,6 +1216,7 @@ kbd {
 }
 
 .inv__hint {
+  flex-shrink: 0;
   margin: 12px 0 0;
   color: #8a969c;
   font-size: 11px;
@@ -1192,13 +1228,23 @@ kbd {
   top: 50%;
   left: 50%;
   z-index: 5;
+  display: flex;
+  flex-direction: column;
   width: min(380px, calc(100vw - 32px));
   max-height: min(70vh, 520px);
-  overflow: auto;
+  overflow: hidden;
   padding: 16px 18px;
   border: 1px solid #2c3338;
   background: rgb(18 24 30 / 96%);
   transform: translate(-50%, -50%);
+}
+
+.panel__body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+  padding-right: 2px;
+  overscroll-behavior: contain;
 }
 
 .attr__list,
@@ -1220,6 +1266,10 @@ kbd {
   padding: 8px 10px;
   border: 1px solid #2c3338;
   background: #12181e;
+}
+
+.skill__row--shop {
+  flex-wrap: wrap;
 }
 
 .skill__row-icon {
@@ -1706,6 +1756,31 @@ kbd {
   opacity: 0.45;
 }
 
+.camp__tabs {
+  display: flex;
+  flex-shrink: 0;
+  margin: 0 0 10px;
+  overflow: hidden;
+  border: 1px solid #2c3338;
+  border-radius: 4px;
+}
+
+.camp__tab {
+  cursor: pointer;
+  flex: 1;
+  padding: 7px 10px;
+  border: 0;
+  background: #12181e;
+  color: #8a969c;
+  font: inherit;
+  font-size: 12px;
+}
+
+.camp__tab--on {
+  background: rgb(212 165 116 / 16%);
+  color: #d4a574;
+}
+
 .camp__sub {
   margin: 12px 0 6px;
   color: #d4a574;
@@ -1718,6 +1793,50 @@ kbd {
   flex-wrap: wrap;
   gap: 6px;
   justify-content: flex-end;
+  align-items: center;
+}
+
+.camp__buy button {
+  white-space: nowrap;
+}
+
+.qty-step {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 4px;
+}
+
+.qty-step__btn,
+.qty-step__max {
+  cursor: pointer;
+  min-width: 28px;
+  padding: 3px 7px;
+  border: 1px solid #3d4a42;
+  background: #1a242c;
+  color: #d4a574;
+  font: inherit;
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.qty-step__n {
+  min-width: 1.4em;
+  color: #f4f6f5;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.qty-step__max {
+  min-width: 0;
+  color: #8a969c;
+}
+
+.qty-step__btn:disabled,
+.qty-step__max:disabled {
+  cursor: not-allowed;
+  opacity: 0.4;
 }
 
 .camp__buy button {
@@ -1725,6 +1844,7 @@ kbd {
 }
 
 .camp__msg {
+  flex-shrink: 0;
   margin: 0 0 8px;
   color: #6e9c9a;
   font-size: 12px;
@@ -1974,11 +2094,19 @@ kbd {
   }
 
   .panel,
-  .panel--spec,
+  .panel--spec {
+    width: min(100%, calc(100vw - 16px)) !important;
+    max-height: calc(100vh - 24px);
+    overflow: hidden;
+  }
+
   .panel--worldmap {
     width: min(100%, calc(100vw - 16px)) !important;
     max-height: calc(100vh - 24px);
-    overflow: auto;
+    overflow: hidden;
+  }
+
+  .panel__body {
     -webkit-overflow-scrolling: touch;
   }
 
@@ -1991,6 +2119,10 @@ kbd {
 
   .hud__save button,
   .camp__buy button,
+  .camp__tab,
+  .qty-step__btn,
+  .qty-step__max,
+  .panel__close,
   .panel__actions button,
   .inv__sort {
     min-height: 40px;

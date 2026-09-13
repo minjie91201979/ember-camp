@@ -496,8 +496,10 @@ export type CampShopRow = {
   price: number;
   quality: ItemQuality;
   kind: ItemKind;
-  /** 药水可 ×5 买入 */
+  /** 药水 / 材料可调数量买入 */
   canBuyBulk: boolean;
+  /** 当前金币与堆叠约束下的可买上限 */
+  buyMax: number;
   /** 背包中已有数量（堆叠合计；装备按件数） */
   ownedQty: number;
   /** 单行摘要（兼容） */

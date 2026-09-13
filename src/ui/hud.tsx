@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, type ReactElement, type ReactNode } from 'react';
 import { PLAYER } from '../game/config';
 import { CONTROL_HELP } from '../game/data/controls';
 import { ZONE_FLIGHT_EDGES, ZONE_MAP_POS } from '../game/data/world-map-layout';
@@ -29,7 +29,7 @@ type HudProps = {
   vitals: HudSnapshot;
   onRespawn: (choice: RespawnChoice) => void;
   onEquip: (uid: number) => void;
-  onDiscard: (uid: number) => void;
+  onDiscard: (uid: number, qty?: number) => void;
   onDraftAttr: (key: AttrKey, delta: 1 | -1) => void;
   onRecommendAttrs: () => void;
   onClearDraft: () => void;
@@ -38,7 +38,7 @@ type HudProps = {
   onLearnSkill: (id: string) => void;
   onAssignSkillBar: (id: string, slot: number) => void;
   onBuy: (defId: string, qty?: number) => void;
-  onSell: (uid: number) => void;
+  onSell: (uid: number, qty?: number) => void;
   onSellMaterials: () => void;
   onSellCommonGear: () => void;
   onSellUncommonGear: () => void;
@@ -69,6 +69,7 @@ type HudProps = {
   }) => void;
   onSortBag: () => void;
   onClosePause: () => void;
+  onClosePanel: () => void;
   onPauseOpenChar: () => void;
   onPauseOpenSkills: () => void;
 };
@@ -123,6 +124,87 @@ const QUALITY_CLASS: Record<string, string> = {
 const CHALLENGE_HINT =
   '短图限时清精英。通关后自动进下一层（词缀重滚、敌人加强），失败回营。刷强化材料与金币。';
 
+function clampQty(n: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, Math.floor(n)));
+}
+
+function QtyStepper({
+  value,
+  min,
+  max,
+  onChange,
+}: {
+  value: number;
+  min: number;
+  max: number;
+  onChange: (n: number) => void;
+}): ReactElement {
+  return (
+    <span className="qty-step">
+      <button
+        type="button"
+        className="qty-step__btn"
+        disabled={value <= min}
+        aria-label="减少数量"
+        onClick={() => onChange(clampQty(value - 1, min, max))}
+      >
+        −
+      </button>
+      <span className="qty-step__n">{value}</span>
+      <button
+        type="button"
+        className="qty-step__btn"
+        disabled={value >= max}
+        aria-label="增加数量"
+        onClick={() => onChange(clampQty(value + 1, min, max))}
+      >
+        +
+      </button>
+      <button
+        type="button"
+        className="qty-step__max"
+        disabled={value >= max}
+        onClick={() => onChange(max)}
+      >
+        最大
+      </button>
+    </span>
+  );
+}
+
+function PanelHead({
+  title,
+  subtitle,
+  onClose,
+  extra,
+  className,
+}: {
+  title: string;
+  subtitle?: ReactNode;
+  onClose: () => void;
+  extra?: ReactNode;
+  className?: string;
+}): ReactElement {
+  return (
+    <header className={className ? `inv__head ${className}` : 'inv__head'}>
+      <div className="inv__head-row">
+        <h2>{title}</h2>
+        <div className="inv__head-tools">
+          {extra}
+          <button type="button" className="panel__close" aria-label="关闭" onClick={onClose}>
+            ×
+          </button>
+        </div>
+      </div>
+      {subtitle != null && subtitle !== false ? <p>{subtitle}</p> : null}
+    </header>
+  );
+}
+
+function PanelBody({ children }: { children: ReactNode }): ReactElement {
+  return <div className="panel__body">{children}</div>;
+}
+
 export function Hud({
   vitals,
   onRespawn,
@@ -163,6 +245,7 @@ export function Hud({
   onSetGameplay,
   onSortBag,
   onClosePause,
+  onClosePanel,
   onPauseOpenChar,
   onPauseOpenSkills,
 }: HudProps): JSX.Element {
@@ -270,8 +353,10 @@ export function Hud({
     autoPickupConsumables: true,
   };
   const [floatTip, setFloatTip] = useState<FloatTipState | null>(null);
+  const [buyQty, setBuyQty] = useState<Record<string, number>>({});
+  const [shopTab, setShopTab] = useState<'buy' | 'sell'>('buy');
   const [confirmAct, setConfirmAct] = useState<
-    | { kind: 'discard' | 'sell' | 'dismantle'; uid: number }
+    | { kind: 'discard' | 'sell' | 'dismantle'; uid: number; qty: number }
     | { kind: 'sell-mats' | 'sell-white' | 'sell-green' | 'sell-blue' }
     | null
   >(null);
@@ -286,6 +371,8 @@ export function Hud({
       setFloatTip(null);
     }
     setConfirmAct(null);
+    setBuyQty({});
+    setShopTab('buy');
   }, [vitals.invOpen, vitals.campOpen]);
 
   const placeFloatTip = (el: HTMLElement, payload: ItemTipPayload): void => {
@@ -325,13 +412,14 @@ export function Hud({
     compare: row.compare ?? [],
   });
 
-  const requestDiscard = (uid: number): void => {
+  const requestDiscard = (uid: number, stackQty: number): void => {
     if (confirmAct?.kind === 'discard' && confirmAct.uid === uid) {
+      const qty = confirmAct.qty;
       setConfirmAct(null);
-      onDiscard(uid);
+      onDiscard(uid, qty);
       return;
     }
-    setConfirmAct({ kind: 'discard', uid });
+    setConfirmAct({ kind: 'discard', uid, qty: stackQty });
   };
 
   const requestDismantle = (uid: number): void => {
@@ -340,16 +428,17 @@ export function Hud({
       onDismantle(uid);
       return;
     }
-    setConfirmAct({ kind: 'dismantle', uid });
+    setConfirmAct({ kind: 'dismantle', uid, qty: 1 });
   };
 
-  const requestSell = (uid: number): void => {
+  const requestSell = (uid: number, stackQty: number): void => {
     if (confirmAct?.kind === 'sell' && confirmAct.uid === uid) {
+      const qty = confirmAct.qty;
       setConfirmAct(null);
-      onSell(uid);
+      onSell(uid, qty);
       return;
     }
-    setConfirmAct({ kind: 'sell', uid });
+    setConfirmAct({ kind: 'sell', uid, qty: stackQty });
   };
 
   const requestSellMaterials = (): void => {
@@ -803,9 +892,10 @@ export function Hud({
 
       {vitals.invOpen ? (
         <div className="inv">
-          <header className="inv__head">
-            <div className="inv__head-row">
-              <h2>背包</h2>
+          <PanelHead
+            title="背包"
+            onClose={onClosePanel}
+            extra={
               <button
                 type="button"
                 className="inv__sort"
@@ -814,18 +904,21 @@ export function Hud({
               >
                 排序
               </button>
-            </div>
-            <p>
-              {vitals.bag.length}/{vitals.bagCap ?? 40} ·{' '}
-              <span className="inv__gold">
-                <ItemIcon subject="gold" quality="legendary" size={15} /> {vitals.gold}
-              </span>
-              {(vitals.bagSlotsLeft ?? 99) <= 2 && (vitals.bagSlotsLeft ?? 0) > 0
-                ? ` · 将满（剩 ${vitals.bagSlotsLeft}）`
-                : ''}
-              {(vitals.bagSlotsLeft ?? 1) <= 0 ? ' · 已满' : ''}
-            </p>
-          </header>
+            }
+            subtitle={
+              <>
+                {vitals.bag.length}/{vitals.bagCap ?? 40} ·{' '}
+                <span className="inv__gold">
+                  <ItemIcon subject="gold" quality="legendary" size={15} /> {vitals.gold}
+                </span>
+                {(vitals.bagSlotsLeft ?? 99) <= 2 && (vitals.bagSlotsLeft ?? 0) > 0
+                  ? ` · 将满（剩 ${vitals.bagSlotsLeft}）`
+                  : ''}
+                {(vitals.bagSlotsLeft ?? 1) <= 0 ? ' · 已满' : ''}
+              </>
+            }
+          />
+          <PanelBody>
           <ul className="inv__list">
             {vitals.bag.length === 0 ? <li className="inv__empty">空空如也</li> : null}
             {vitals.bag.map((item) => {
@@ -881,23 +974,38 @@ export function Hud({
                           : '分解'}
                       </button>
                     ) : null}
+                    {confirmAct?.kind === 'discard' &&
+                    confirmAct.uid === item.uid &&
+                    item.qty > 1 ? (
+                      <QtyStepper
+                        value={clampQty(confirmAct.qty, 1, item.qty)}
+                        min={1}
+                        max={item.qty}
+                        onChange={(qty) => setConfirmAct({ kind: 'discard', uid: item.uid, qty })}
+                      />
+                    ) : null}
                     <button
                       type="button"
                       className="inv__discard"
-                      onClick={() => requestDiscard(item.uid)}
+                      onClick={() => requestDiscard(item.uid, item.qty)}
                     >
                       {confirmAct?.kind === 'discard' && confirmAct.uid === item.uid
-                        ? `确认丢弃（约 ${item.sellPrice} 金）`
-                        : '丢弃'}
+                        ? item.qty > 1
+                          ? `确认丢弃 ×${clampQty(confirmAct.qty, 1, item.qty)}`
+                          : `确认丢弃（约 ${item.sellPrice} 金）`
+                        : item.qty > 1
+                          ? `丢弃 ×${item.qty}`
+                          : '丢弃'}
                     </button>
                   </div>
                 </li>
               );
             })}
           </ul>
+          </PanelBody>
           <p className="inv__hint">
             <kbd>I</kbd> / <kbd>Esc</kbd> 关闭 · 「排序」或暂停里可开自动排序 · 悬停对比当前主手 · 未装备可分解为材料 ·
-            丢弃需再点确认（不退金） · <kbd>R</kbd> 红药 / <kbd>T</kbd> 蓝药
+            丢弃需再点确认（堆叠可调数量，不退金） · <kbd>R</kbd> 红药 / <kbd>T</kbd> 蓝药
           </p>
         </div>
       ) : null}
@@ -953,10 +1061,8 @@ export function Hud({
 
       {vitals.settingsOpen ? (
         <div className="inv inv--settings" role="dialog" aria-label="暂停">
-          <header className="inv__head">
-            <h2>暂停</h2>
-            <p>世界已冻结</p>
-          </header>
+          <PanelHead title="暂停" subtitle="世界已冻结" onClose={onClosePause} />
+          <PanelBody>
           <div className="panel__actions" style={{ marginBottom: 12 }}>
             <button type="button" className="panel__primary" onClick={onClosePause}>
               继续
@@ -1039,6 +1145,7 @@ export function Hud({
               </li>
             ))}
           </ul>
+          </PanelBody>
           <p className="inv__hint">
             <kbd>Esc</kbd> / <kbd>O</kbd> 继续 · 换区 / BOSS / 复活会自动存档
           </p>
@@ -1047,14 +1154,17 @@ export function Hud({
 
       {vitals.catalogOpen ? (
         <div className="inv inv--catalog">
-          <header className="inv__head">
-            <h2>橙装图鉴</h2>
-            <p>
-              已发现{' '}
-              {(vitals.legendaryCatalog ?? []).filter((e) => e.discovered).length}/
-              {(vitals.legendaryCatalog ?? []).length}
-            </p>
-          </header>
+          <PanelHead
+            title="橙装图鉴"
+            onClose={onClosePanel}
+            subtitle={
+              <>
+                已发现 {(vitals.legendaryCatalog ?? []).filter((e) => e.discovered).length}/
+                {(vitals.legendaryCatalog ?? []).length}
+              </>
+            }
+          />
+          <PanelBody>
           <ul className="inv__list">
             {(vitals.legendaryCatalog ?? []).map((entry) => (
               <li
@@ -1069,6 +1179,7 @@ export function Hud({
               </li>
             ))}
           </ul>
+          </PanelBody>
           <p className="inv__hint">
             BOSS 掉落概率出橙装；换区重进可反复刷。
             <kbd>L</kbd> / <kbd>Esc</kbd> 关闭
@@ -1078,10 +1189,12 @@ export function Hud({
 
       {vitals.charOpen ? (
         <div className="panel panel--char">
-          <header className="inv__head">
-            <h2>角色 · Lv.{vitals.level}</h2>
-            <p>可分配 {vitals.draftLeft}</p>
-          </header>
+          <PanelHead
+            title={`角色 · Lv.${vitals.level}`}
+            subtitle={`可分配 ${vitals.draftLeft}`}
+            onClose={onClosePanel}
+          />
+          <PanelBody>
           <ul className="attr__list">
             {vitals.attrs.map((row) => (
               <li key={row.key} className="attr__row">
@@ -1139,6 +1252,7 @@ export function Hud({
               确认加点
             </button>
           </div>
+          </PanelBody>
           <p className="inv__hint">
             <kbd>C</kbd> / <kbd>Esc</kbd> 关闭 · 先点 + 预览，再确认
           </p>
@@ -1147,6 +1261,14 @@ export function Hud({
 
       {vitals.levelUpOpen && !vitals.specPickOpen && vitals.specNodePickTier === null ? (
         <div className="levelup-prompt" role="dialog" aria-label="升级加点">
+          <button
+            type="button"
+            className="panel__close panel__close--float"
+            aria-label="关闭"
+            onClick={onDismissLevelUp}
+          >
+            ×
+          </button>
           <p className="levelup-prompt__kicker">升级</p>
           <h2 className="levelup-prompt__title">Lv.{vitals.level}</h2>
           <p className="levelup-prompt__gain">
@@ -1172,10 +1294,8 @@ export function Hud({
 
       {vitals.specPickOpen ? (
         <div className="panel panel--spec">
-          <header className="inv__head">
-            <h2>选择专精</h2>
-            <p>Lv.10 · 三选一</p>
-          </header>
+          <PanelHead title="选择专精" subtitle="Lv.10 · 三选一" onClose={onClosePanel} />
+          <PanelBody>
           <ul className="spec__list">
             {vitals.specs.map((spec) => (
               <li key={spec.id} className="spec__card">
@@ -1194,6 +1314,7 @@ export function Hud({
               </li>
             ))}
           </ul>
+          </PanelBody>
           <p className="inv__hint">
             <kbd>Esc</kbd> 稍后选择 · 未选前 K 会提示
           </p>
@@ -1202,10 +1323,12 @@ export function Hud({
 
       {vitals.specNodePickTier !== null ? (
         <div className="panel panel--spec">
-          <header className="inv__head">
-            <h2>专精节点</h2>
-            <p>Lv.{vitals.specNodePickTier} · {vitals.specName ?? '专精'} · 三选一</p>
-          </header>
+          <PanelHead
+            title="专精节点"
+            subtitle={`Lv.${vitals.specNodePickTier} · ${vitals.specName ?? '专精'} · 三选一`}
+            onClose={onClosePanel}
+          />
+          <PanelBody>
           <ul className="spec__list">
             {vitals.specNodeOptions.map((node) => (
               <li key={node.id} className="spec__card">
@@ -1225,6 +1348,7 @@ export function Hud({
               </li>
             ))}
           </ul>
+          </PanelBody>
           <p className="inv__hint">
             <kbd>Esc</kbd> 稍后选择 · 可在技能面板查看已选节点
           </p>
@@ -1233,10 +1357,8 @@ export function Hud({
 
       {vitals.skillOpen ? (
         <div className="panel panel--skill">
-          <header className="inv__head">
-            <h2>技能</h2>
-            <p>技能点 {vitals.unspentSkill}</p>
-          </header>
+          <PanelHead title="技能" subtitle={`技能点 ${vitals.unspentSkill}`} onClose={onClosePanel} />
+          <PanelBody>
           <p className="spec__current">
             专精：{vitals.specName ?? (vitals.needsSpec ? '未选择' : '未解锁')}
           </p>
@@ -1338,6 +1460,7 @@ export function Hud({
               </li>
             ))}
           </ul>
+          </PanelBody>
           <p className="inv__hint">
             <kbd>K</kbd> / <kbd>Esc</kbd> 关闭 · 点 Q/E/1/2 换栏 · 对比相对 Q 栏
           </p>
@@ -1348,26 +1471,57 @@ export function Hud({
       vitals.campOpen === 'apothecary' ||
       vitals.campOpen === 'weaponsmith' ? (
         <div className="panel panel--camp">
-          <header className="inv__head">
-            <h2>
-              {vitals.campOpen === 'apothecary'
+          <PanelHead
+            title={
+              vitals.campOpen === 'apothecary'
                 ? '药水商人'
                 : vitals.campOpen === 'weaponsmith'
                   ? '武器商人'
-                  : '杂货商人'}
-            </h2>
-            <p>
+                  : '杂货商人'
+            }
+            onClose={onClosePanel}
+            subtitle={
               <span className="inv__gold">
                 <ItemIcon subject="gold" quality="legendary" size={15} /> {vitals.gold}
               </span>
-            </p>
-          </header>
+            }
+          />
           {vitals.campMessage ? <p className="camp__msg">{vitals.campMessage}</p> : null}
-          <h3 className="camp__sub">购买</h3>
+          <div className="camp__tabs" role="tablist" aria-label="买卖">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={shopTab === 'buy'}
+              className={`camp__tab${shopTab === 'buy' ? ' camp__tab--on' : ''}`}
+              onClick={() => {
+                setShopTab('buy');
+                setConfirmAct(null);
+              }}
+            >
+              购买
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={shopTab === 'sell'}
+              className={`camp__tab${shopTab === 'sell' ? ' camp__tab--on' : ''}`}
+              onClick={() => {
+                setShopTab('sell');
+                setConfirmAct(null);
+              }}
+            >
+              出售
+            </button>
+          </div>
+          <PanelBody>
+          {shopTab === 'buy' ? (
           <ul className="skill__list">
             {vitals.shopStock.map((row) => {
               const payload = tipFromShop(row);
               const hasTip = hasTipPayload(payload);
+              const maxBuy = Math.max(0, row.buyMax);
+              const qty = clampQty(buyQty[row.defId] ?? 1, 1, Math.max(1, maxBuy));
+              const total = row.price * (row.canBuyBulk ? qty : 1);
               return (
                 <li
                   key={row.defId}
@@ -1400,24 +1554,30 @@ export function Hud({
                     ) : null}
                   </span>
                   <span className="camp__buy">
-                    <button type="button" onClick={() => onBuy(row.defId, 1)}>
-                      ×1 · {row.price} 金
-                    </button>
-                    {row.canBuyBulk ? (
-                      <button type="button" onClick={() => onBuy(row.defId, 5)}>
-                        ×5 · {row.price * 5} 金
-                      </button>
+                    {row.canBuyBulk && maxBuy > 1 ? (
+                      <QtyStepper
+                        value={qty}
+                        min={1}
+                        max={maxBuy}
+                        onChange={(n) => setBuyQty((prev) => ({ ...prev, [row.defId]: n }))}
+                      />
                     ) : null}
+                    <button
+                      type="button"
+                      onClick={() => onBuy(row.defId, row.canBuyBulk ? qty : 1)}
+                    >
+                      {row.canBuyBulk && qty > 1
+                        ? `购买 ×${qty} · ${total} 金`
+                        : `×1 · ${row.price} 金`}
+                    </button>
                   </span>
                 </li>
               );
             })}
           </ul>
-          {vitals.campOpen === 'merchant' || vitals.campOpen === 'weaponsmith' ? (
+          ) : null}
+          {shopTab === 'sell' ? (
             <>
-          <h3 className="camp__sub">
-            {vitals.campOpen === 'weaponsmith' ? '收购武器' : '出售背包'}
-          </h3>
           {vitals.campOpen === 'merchant' ? (
           <div className="panel__actions" style={{ marginBottom: 8 }}>
             <button
@@ -1477,7 +1637,15 @@ export function Hud({
           ) : null}
           <ul className="skill__list">
             {vitals.bag
-              .filter((item) => vitals.campOpen === 'merchant' || item.kind === 'gear')
+              .filter((item) => {
+                if (vitals.campOpen === 'weaponsmith') {
+                  return item.kind === 'gear';
+                }
+                if (vitals.campOpen === 'apothecary') {
+                  return item.kind === 'potion';
+                }
+                return true;
+              })
               .map((item) => {
               const payload = tipFromBag(item);
               const hasTip = hasTipPayload(payload);
@@ -1511,43 +1679,71 @@ export function Hud({
                     {item.qty > 1 ? ` ×${item.qty}` : ''}
                     {item.equipped ? ' · 装备中' : ''}
                   </span>
+                  {confirmAct?.kind === 'sell' && confirmAct.uid === item.uid && item.qty > 1 ? (
+                    <QtyStepper
+                      value={clampQty(confirmAct.qty, 1, item.qty)}
+                      min={1}
+                      max={item.qty}
+                      onChange={(qty) => setConfirmAct({ kind: 'sell', uid: item.uid, qty })}
+                    />
+                  ) : null}
                   <button
                     type="button"
                     disabled={item.equipped}
-                    onClick={() => requestSell(item.uid)}
+                    onClick={() => requestSell(item.uid, item.qty)}
                   >
                     {confirmAct?.kind === 'sell' && confirmAct.uid === item.uid
-                      ? `确认卖出 ${item.sellPrice} 金`
-                      : `卖出 ${item.sellPrice} 金`}
+                      ? `确认卖出 ×${clampQty(confirmAct.qty, 1, item.qty)} · ${
+                          item.sellPrice * clampQty(confirmAct.qty, 1, item.qty)
+                        } 金`
+                      : item.qty > 1
+                        ? `卖出 ×${item.qty} · ${item.sellPrice * item.qty} 金`
+                        : `卖出 ${item.sellPrice} 金`}
                   </button>
                 </li>
               );
             })}
+            {vitals.bag.filter((item) => {
+              if (vitals.campOpen === 'weaponsmith') {
+                return item.kind === 'gear';
+              }
+              if (vitals.campOpen === 'apothecary') {
+                return item.kind === 'potion';
+              }
+              return true;
+            }).length === 0 ? (
+              <li className="inv__empty">没有可出售的物品</li>
+            ) : null}
           </ul>
             </>
           ) : null}
+          </PanelBody>
           <p className="inv__hint">
             <kbd>F</kbd> / <kbd>Esc</kbd> 关闭
             {vitals.campOpen === 'apothecary'
-              ? ' · 药水可 ×5 买入'
+              ? ' · 切换出售可卖药水 · 买入受堆叠上限'
               : vitals.campOpen === 'weaponsmith'
                 ? ' · 库存随等级刷新 · 可回收未装备武器'
-                : ' · 一键卖至蓝装需确认 · 紫/橙仍逐件卖'}
+                : ' · 材料可调数量买卖 · 一键卖至蓝装需确认 · 紫/橙仍逐件卖'}
           </p>
         </div>
       ) : null}
 
       {vitals.campOpen === 'blacksmith' ? (
         <div className="panel panel--camp">
-          <header className="inv__head">
-            <h2>铁匠</h2>
-            <p>
-              强化 +{vitals.weaponEnhance}/8
-              {vitals.weaponDur !== null
-                ? ` · 耐久 ${vitals.weaponDur}/${vitals.weaponMaxDur}`
-                : ''}
-            </p>
-          </header>
+          <PanelHead
+            title="铁匠"
+            onClose={onClosePanel}
+            subtitle={
+              <>
+                强化 +{vitals.weaponEnhance}/8
+                {vitals.weaponDur !== null
+                  ? ` · 耐久 ${vitals.weaponDur}/${vitals.weaponMaxDur}`
+                  : ''}
+              </>
+            }
+          />
+          <PanelBody>
           {vitals.campMessage ? <p className="camp__msg">{vitals.campMessage}</p> : null}
           <p className="camp__desc">
             强化：消耗 {vitals.enhanceCost} 金 + 1 任意材料（材料 {vitals.enhanceMats}）
@@ -1589,6 +1785,7 @@ export function Hud({
                   : `修理（${vitals.repairCost} 金）`}
             </button>
           </div>
+          </PanelBody>
           <p className="inv__hint">
             <kbd>F</kbd> / <kbd>Esc</kbd> 关闭
           </p>
@@ -1597,10 +1794,8 @@ export function Hud({
 
       {vitals.campOpen === 'trainer' ? (
         <div className="panel panel--camp">
-          <header className="inv__head">
-            <h2>训练师</h2>
-            <p>重置加点</p>
-          </header>
+          <PanelHead title="训练师" subtitle="重置加点" onClose={onClosePanel} />
+          <PanelBody>
           {vitals.campMessage ? <p className="camp__msg">{vitals.campMessage}</p> : null}
           <div className="panel__actions">
             <button type="button" onClick={onResetAttrs}>
@@ -1613,6 +1808,7 @@ export function Hud({
               重置专精{vitals.specResetCost > 0 ? ` (${vitals.specResetCost}金)` : '（首次免费）'}
             </button>
           </div>
+          </PanelBody>
           <p className="inv__hint">
             <kbd>F</kbd> / <kbd>Esc</kbd> 关闭
           </p>
@@ -1621,10 +1817,8 @@ export function Hud({
 
       {vitals.campOpen === 'challenge' ? (
         <div className="panel panel--camp">
-          <header className="inv__head">
-            <h2>词缀试炼</h2>
-            <p>限时清精英 · 层层攀升刷材料</p>
-          </header>
+          <PanelHead title="词缀试炼" subtitle="限时清精英 · 层层攀升刷材料" onClose={onClosePanel} />
+          <PanelBody>
           {vitals.campMessage ? <p className="camp__msg">{vitals.campMessage}</p> : null}
           <p className="inv__hint">
             最高通关：第 {vitals.challengeBestFloor} 层
@@ -1635,6 +1829,7 @@ export function Hud({
               开始挑战（第 1 层 · {CHALLENGE_DURATION}s）
             </button>
           </div>
+          </PanelBody>
           <p className="inv__hint">
             <kbd>F</kbd> / <kbd>Esc</kbd> 关闭
           </p>
@@ -1643,13 +1838,17 @@ export function Hud({
 
       {vitals.campOpen === 'teleport' ? (
         <div className="panel panel--camp panel--worldmap" role="dialog" aria-label="世界地图">
-          <header className="inv__head worldmap__head">
-            <h2>世界地图</h2>
-            <p>
-              烬土大陆 · 传送阵
-              {vitals.ngPlusLevel > 0 ? ` · NG+${vitals.ngPlusLevel}` : ''}
-            </p>
-          </header>
+          <PanelHead
+            className="worldmap__head"
+            title="世界地图"
+            onClose={onClosePanel}
+            subtitle={
+              <>
+                烬土大陆 · 传送阵
+                {vitals.ngPlusLevel > 0 ? ` · NG+${vitals.ngPlusLevel}` : ''}
+              </>
+            }
+          />
           {vitals.campMessage ? <p className="camp__msg">{vitals.campMessage}</p> : null}
           <div className="worldmap worldmap--atlas" role="list">
             <div className="worldmap__terrain" aria-hidden>

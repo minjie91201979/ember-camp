@@ -214,7 +214,7 @@ export function App(): JSX.Element {
             vitals={vitals}
             onRespawn={(choice) => gameRef.current?.respawn(choice)}
             onEquip={(uid) => gameRef.current?.equipItem(uid)}
-            onDiscard={(uid) => gameRef.current?.discardBagItem(uid)}
+            onDiscard={(uid, qty) => gameRef.current?.discardBagItem(uid, qty)}
             onDraftAttr={(key, delta) => gameRef.current?.draftAttr(key, delta)}
             onRecommendAttrs={() => gameRef.current?.recommendAttrs()}
             onClearDraft={() => gameRef.current?.clearDraft()}
@@ -223,7 +223,7 @@ export function App(): JSX.Element {
             onLearnSkill={(id) => gameRef.current?.learnPlayerSkill(id)}
             onAssignSkillBar={(id, slot) => gameRef.current?.assignPlayerSkillBar(id, slot)}
             onBuy={(defId, qty) => gameRef.current?.buyItem(defId, qty)}
-            onSell={(uid) => gameRef.current?.sellItem(uid)}
+            onSell={(uid, qty) => gameRef.current?.sellItem(uid, qty)}
             onSellMaterials={() => gameRef.current?.sellMaterials()}
             onSellCommonGear={() => gameRef.current?.sellCommonGear()}
             onSellUncommonGear={() => gameRef.current?.sellUncommonGear()}
@@ -250,6 +250,7 @@ export function App(): JSX.Element {
             onSetGameplay={(patch) => gameRef.current?.setGameplay(patch)}
             onSortBag={() => gameRef.current?.sortPlayerBag()}
             onClosePause={() => gameRef.current?.closePauseMenu()}
+            onClosePanel={() => gameRef.current?.closeHudPanel()}
             onPauseOpenChar={() => gameRef.current?.openCharFromPause()}
             onPauseOpenSkills={() => gameRef.current?.openSkillsFromPause()}
           />

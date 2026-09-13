@@ -21,6 +21,7 @@ import {
   CAMP_NPCS,
   shopStockFor,
   buyShopItem,
+  shopBuyMax,
   bagOwnedQty,
   canEnhanceWeapon,
   countEnhanceMaterials,
@@ -97,7 +98,7 @@ import {
   openAttrsFromLevelUp,
   openSkillsFromLevelUp,
 } from './systems/level-up-prompt';
-import { isAnyPanelOpen } from './systems/ui-panels';
+import { isAnyPanelOpen, closeAllPanels } from './systems/ui-panels';
 import { tutorialHint, bootTutorialToast, stepTutorialExplore } from './systems/tutorial';
 import { isQaGod, isQaSessionOn, stepQa } from './systems/debug-qa';
 import { getAudioPrefs, setAudioPrefs } from '../audio/prefs';
@@ -180,8 +181,8 @@ export class Game {
     }
   }
 
-  discardBagItem(uid: number): void {
-    if (discardItem(this.world, uid)) {
+  discardBagItem(uid: number, qty?: number): void {
+    if (discardItem(this.world, uid, qty)) {
       this.bumpHud();
     }
   }
@@ -214,6 +215,12 @@ export class Game {
   closePauseMenu(): void {
     if (this.world.settingsOpen) {
       this.world.settingsOpen = false;
+      this.bumpHud();
+    }
+  }
+
+  closeHudPanel(): void {
+    if (closeAllPanels(this.world)) {
       this.bumpHud();
     }
   }
@@ -289,8 +296,8 @@ export class Game {
     this.bumpHud();
   }
 
-  sellItem(uid: number): void {
-    this.world.campMessage = sellBagItem(this.world, uid);
+  sellItem(uid: number, qty = 1): void {
+    this.world.campMessage = sellBagItem(this.world, uid, qty);
     this.bumpHud();
   }
 
@@ -926,6 +933,7 @@ export class Game {
               quality: 'common' as const,
               kind: 'material' as const,
               canBuyBulk: false,
+              buyMax: shopBuyMax(w, s.defId, s.price),
               ownedQty,
               detail: null,
               stats: [],
@@ -940,7 +948,8 @@ export class Game {
             price: s.price,
             quality: def.quality,
             kind: def.kind,
-            canBuyBulk: def.kind === 'potion',
+            canBuyBulk: def.kind === 'potion' || def.kind === 'material',
+            buyMax: shopBuyMax(w, s.defId, s.price),
             ownedQty,
             detail: formatItemSummary(def),
             stats: itemStatLines(def),

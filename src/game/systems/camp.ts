@@ -65,8 +65,8 @@ export const MERCHANT_STOCK: { defId: string; price: number }[] = [
 /** @deprecated 兼容旧引用；请用 shopStockFor */
 export const SHOP_STOCK = [...POTION_SHOP_STOCK, ...MERCHANT_STOCK];
 
-/** 药水一键买入数量 */
-export const SHOP_POTION_BULK = 5;
+/** 材料单次买入上限（药水另受堆叠上限约束）。 */
+export const SHOP_STACK_BUY_CAP = 99;
 
 const WEAPON_SHOP_CAP = 6;
 
@@ -221,23 +221,40 @@ export function bagOwnedQty(world: World, defId: string): number {
   return n;
 }
 
+/** 当前金币/堆叠约束下可买入的最大数量。 */
+export function shopBuyMax(world: World, defId: string, price: number): number {
+  const def = ITEM_DEFS[defId];
+  const afford = Math.floor(world.gold / Math.max(1, price));
+  if (afford <= 0) {
+    return 0;
+  }
+  if (!def || def.kind === 'gear') {
+    return 1;
+  }
+  if (def.kind === 'potion') {
+    return Math.min(afford, potionStackRoom(world, defId));
+  }
+  if (def.kind === 'material') {
+    return Math.min(afford, SHOP_STACK_BUY_CAP);
+  }
+  return 1;
+}
+
 export function buyShopItem(world: World, defId: string, qty = 1): string {
   const stock = shopStockFor(world).find((s) => s.defId === defId);
   if (!stock) {
     return '商品不存在';
   }
   const def = ITEM_DEFS[defId];
-  let count = Math.max(1, Math.floor(qty));
-  if (def?.kind === 'potion') {
-    const room = potionStackRoom(world, defId);
-    if (room <= 0) {
-      sfx.play('deny');
-      return '该药水已达堆叠上限（20）';
+  const max = shopBuyMax(world, defId, stock.price);
+  if (max <= 0) {
+    sfx.play('deny');
+    if (def?.kind === 'potion' && potionStackRoom(world, defId) <= 0) {
+      return bagAddFailText(world, defId);
     }
-    count = Math.min(count, SHOP_POTION_BULK, room);
-  } else {
-    count = 1;
+    return '金币不足';
   }
+  const count = Math.max(1, Math.min(Math.floor(qty), max));
   const total = stock.price * count;
   if (world.gold < total) {
     sfx.play('deny');
@@ -253,7 +270,7 @@ export function buyShopItem(world: World, defId: string, qty = 1): string {
   return count > 1 ? `购入 ${name} ×${count}` : `购入 ${name}`;
 }
 
-export function sellBagItem(world: World, uid: number): string {
+export function sellBagItem(world: World, uid: number, qty = 1): string {
   const idx = world.bag.findIndex((it) => it.uid === uid);
   const item = world.bag[idx];
   if (!item) {
@@ -263,15 +280,17 @@ export function sellBagItem(world: World, uid: number): string {
     sfx.play('deny');
     return '请先卸下已装备武器';
   }
-  const price = sellPrice(item);
-  world.gold += price;
-  if (item.qty > 1) {
-    item.qty -= 1;
-  } else {
+  const count = Math.max(1, Math.min(Math.floor(qty), item.qty));
+  const unit = sellPrice(item);
+  const gold = unit * count;
+  world.gold += gold;
+  if (count >= item.qty) {
     world.bag.splice(idx, 1);
+  } else {
+    item.qty -= count;
   }
   sfx.play('land');
-  return `售出，获得 ${price} 金`;
+  return count > 1 ? `售出 ×${count}，获得 ${gold} 金` : `售出，获得 ${gold} 金`;
 }
 
 /** 背包中可出售材料的件数与总价（整堆）。 */

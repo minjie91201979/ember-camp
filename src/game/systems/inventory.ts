@@ -159,21 +159,29 @@ export function equipMainhand(world: World, uid: number): boolean {
   return true;
 }
 
-/** 丢弃整组物品；若丢的是已装备主手则自动卸下。 */
-export function discardItem(world: World, uid: number): boolean {
+/** 丢弃指定数量（默认整组）；若丢光已装备主手则自动卸下。 */
+export function discardItem(world: World, uid: number, qty?: number): boolean {
   const idx = world.bag.findIndex((it) => it.uid === uid);
   if (idx < 0) {
     return false;
+  }
+  const item = world.bag[idx];
+  const stack = Math.max(1, item.qty);
+  const count = Math.max(1, Math.min(Math.floor(qty ?? stack), stack));
+  const name = ITEM_DEFS[item.defId]?.name ?? '物品';
+  if (count < stack) {
+    item.qty -= count;
+    world.levelToastT = 1.4;
+    world.levelToastText = `已丢弃 ${name} ×${count}`;
+    return true;
   }
   if (world.mainhandUid === uid) {
     world.mainhandUid = null;
     applyGearStats(world.player, world);
   }
-  const removed = world.bag[idx];
   world.bag.splice(idx, 1);
-  const name = ITEM_DEFS[removed?.defId ?? '']?.name ?? '物品';
   world.levelToastT = 1.4;
-  world.levelToastText = `已丢弃 ${name}`;
+  world.levelToastText = count > 1 ? `已丢弃 ${name} ×${count}` : `已丢弃 ${name}`;
   return true;
 }
 
