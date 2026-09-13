@@ -31,6 +31,24 @@ export type InputFrame = {
   qaGod: boolean;
 };
 
+export type VirtualAction =
+  | 'jump'
+  | 'roll'
+  | 'attack'
+  | 'slam'
+  | 'bash'
+  | 'skill3'
+  | 'skill4'
+  | 'interact'
+  | 'potion'
+  | 'manaPotion'
+  | 'inventory'
+  | 'character'
+  | 'skills'
+  | 'catalog'
+  | 'settings'
+  | 'escape';
+
 const HOLD_PREVENT = new Set([
   ' ',
   'space',
@@ -62,6 +80,9 @@ export class Keyboard {
   private readonly down = new Set<string>();
   private readonly pressed = new Set<string>();
   private mouseClicked = false;
+  private virtualMoveX = 0;
+  private virtualJumpHeld = false;
+  private readonly virtualEdges = new Set<VirtualAction>();
   private readonly onDown = (e: KeyboardEvent): void => {
     const ids = keyIds(e);
     if (ids.some((id) => HOLD_PREVENT.has(id))) {
@@ -82,6 +103,8 @@ export class Keyboard {
   };
   private readonly onBlur = (): void => {
     this.down.clear();
+    this.virtualMoveX = 0;
+    this.virtualJumpHeld = false;
   };
 
   attach(): void {
@@ -100,6 +123,29 @@ export class Keyboard {
     this.mouseClicked = true;
   }
 
+  /** 触屏摇杆：-1..1，0 表示松开 */
+  setVirtualMove(x: number): void {
+    if (!Number.isFinite(x)) {
+      this.virtualMoveX = 0;
+      return;
+    }
+    this.virtualMoveX = Math.max(-1, Math.min(1, x));
+  }
+
+  setVirtualJump(held: boolean): void {
+    if (held && !this.virtualJumpHeld) {
+      this.virtualEdges.add('jump');
+    }
+    this.virtualJumpHeld = held;
+  }
+
+  pulseVirtual(action: VirtualAction): void {
+    this.virtualEdges.add(action);
+    if (action === 'attack') {
+      this.mouseClicked = true;
+    }
+  }
+
   sample(consumeEdges: boolean): InputFrame {
     const left = this.isDown('a') || this.isDown('arrowleft') || this.isDown('keya');
     const right = this.isDown('d') || this.isDown('arrowright') || this.isDown('keyd');
@@ -110,7 +156,11 @@ export class Keyboard {
     if (right) {
       moveX += 1;
     }
-    const jumpPressed = this.wasPressed(' ', 'space', 'w', 'keyw', 'arrowup');
+    if (Math.abs(this.virtualMoveX) > 0.15) {
+      moveX = this.virtualMoveX < 0 ? -1 : 1;
+    }
+    const jumpPressed =
+      this.wasPressed(' ', 'space', 'w', 'keyw', 'arrowup') || this.virtualEdges.has('jump');
     const frame: InputFrame = {
       moveX,
       jumpHeld:
@@ -118,25 +168,29 @@ export class Keyboard {
         this.isDown('space') ||
         this.isDown('w') ||
         this.isDown('keyw') ||
-        this.isDown('arrowup'),
+        this.isDown('arrowup') ||
+        this.virtualJumpHeld,
       jumpPressed,
-      rollPressed: this.wasPressed('shift', 'shiftleft', 'shiftright'),
-      attackPressed: this.wasPressed('j', 'keyj') || this.mouseClicked,
-      slamPressed: this.wasPressed('q', 'keyq'),
-      bashPressed: this.wasPressed('e', 'keye'),
-      skill3Pressed: this.wasPressed('1', 'digit1', 'numpad1'),
-      skill4Pressed: this.wasPressed('2', 'digit2', 'numpad2'),
-      interactPressed: this.wasPressed('f', 'keyf'),
-      inventoryPressed: this.wasPressed('i', 'keyi'),
-      characterPressed: this.wasPressed('c', 'keyc'),
-      skillsPressed: this.wasPressed('k', 'keyk'),
-      catalogPressed: this.wasPressed('l', 'keyl'),
-      settingsPressed: this.wasPressed('o', 'keyo'),
-      potionPressed: this.wasPressed('r', 'keyr'),
-      manaPotionPressed: this.wasPressed('t', 'keyt'),
-      escapePressed: this.wasPressed('escape', 'escape'),
-      respawnBannerPressed: this.wasPressed('1', 'digit1', 'numpad1'),
-      respawnCampPressed: this.wasPressed('2', 'digit2', 'numpad2'),
+      rollPressed: this.wasPressed('shift', 'shiftleft', 'shiftright') || this.virtualEdges.has('roll'),
+      attackPressed:
+        this.wasPressed('j', 'keyj') || this.mouseClicked || this.virtualEdges.has('attack'),
+      slamPressed: this.wasPressed('q', 'keyq') || this.virtualEdges.has('slam'),
+      bashPressed: this.wasPressed('e', 'keye') || this.virtualEdges.has('bash'),
+      skill3Pressed:
+        this.wasPressed('1', 'digit1', 'numpad1') || this.virtualEdges.has('skill3'),
+      skill4Pressed:
+        this.wasPressed('2', 'digit2', 'numpad2') || this.virtualEdges.has('skill4'),
+      interactPressed: this.wasPressed('f', 'keyf') || this.virtualEdges.has('interact'),
+      inventoryPressed: this.wasPressed('i', 'keyi') || this.virtualEdges.has('inventory'),
+      characterPressed: this.wasPressed('c', 'keyc') || this.virtualEdges.has('character'),
+      skillsPressed: this.wasPressed('k', 'keyk') || this.virtualEdges.has('skills'),
+      catalogPressed: this.wasPressed('l', 'keyl') || this.virtualEdges.has('catalog'),
+      settingsPressed: this.wasPressed('o', 'keyo') || this.virtualEdges.has('settings'),
+      potionPressed: this.wasPressed('r', 'keyr') || this.virtualEdges.has('potion'),
+      manaPotionPressed: this.wasPressed('t', 'keyt') || this.virtualEdges.has('manaPotion'),
+      escapePressed: this.wasPressed('escape', 'escape') || this.virtualEdges.has('escape'),
+      respawnBannerPressed: this.wasPressed('1', 'digit1', 'numpad1') || this.virtualEdges.has('skill3'),
+      respawnCampPressed: this.wasPressed('2', 'digit2', 'numpad2') || this.virtualEdges.has('skill4'),
       qaToggle: this.wasPressed('f8', 'f8'),
       qaHeal: this.wasPressed('f1', 'f1'),
       qaSyncLevel: this.wasPressed('f2', 'f2'),
@@ -150,6 +204,7 @@ export class Keyboard {
     if (consumeEdges) {
       this.pressed.clear();
       this.mouseClicked = false;
+      this.virtualEdges.clear();
     }
     return frame;
   }

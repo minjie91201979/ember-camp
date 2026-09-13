@@ -1,6 +1,7 @@
-import type { DummyKind, EnemyBehavior } from '../types';
+import type { DummyKind, EnemyBehavior, EnemyHitEffect, EnemyShotVisual, Hazard } from '../types';
+import { ENEMY_STYLE } from './enemy-style';
 
-/** 四种可复用行为模板；新区只换外观与数值。 */
+/** 外形族 + 行为模板；色盘 / 弹道 / 地面圈由 ENEMY_STYLE 覆盖。 */
 
 export type EnemyDefId =
   | 'rotwolf'
@@ -84,6 +85,13 @@ export type EnemyDef = {
   elite: boolean;
   boss: boolean;
   noRespawn?: boolean;
+  /** 主体色；缺省由外形族默认色补上 */
+  body?: number;
+  accent?: number;
+  glow?: number;
+  shotVisual?: EnemyShotVisual;
+  hitEffect?: EnemyHitEffect;
+  hazardKind?: Hazard['kind'];
 };
 
 export const ENEMY_DEFS: Record<EnemyDefId, EnemyDef> = {
@@ -1173,3 +1181,7 @@ export const ENEMY_DEFS: Record<EnemyDefId, EnemyDef> = {
     noRespawn: true,
   },
 };
+
+for (const id of Object.keys(ENEMY_STYLE) as EnemyDefId[]) {
+  Object.assign(ENEMY_DEFS[id], ENEMY_STYLE[id]);
+}

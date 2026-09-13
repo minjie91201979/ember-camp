@@ -273,7 +273,10 @@ export const PLAYER = {
 export const CAMERA = {
   frustum: 10,
   z: 18,
-  lookY: 1.05,
+  /** 视点相对角色脚底的 Y。加大则整帧上移，地面在画面里更靠下、占比更小。 */
+  lookY: 3.05,
+  /** 相机相对视点的抬高；过大俯视会把地面顶面铺满下半屏，保持小俯角。 */
+  eyeY: 1.2,
   damp: 8,
   /** 沿朝向预瞄距离（世界单位）。 */
   lookAhead: 0.9,
@@ -303,10 +306,33 @@ export const POTION = {
   stackMax: 20,
 } as const;
 
+/** 关卡表仍以旧地面顶面 1 为基准；运行时对齐到 WORLD.groundTop。 */
+export const LEGACY_GROUND_TOP = 1;
+
 export const WORLD = {
   spawnX: 0.55,
-  spawnY: 1.15,
+  spawnY: 0.65,
+  /** 主地面顶面。原为 1，按需求降为 1/2。 */
+  groundTop: 0.5,
 } as const;
+
+/** 场景深度：+Z 朝向相机。 */
+export const SCENE_Z = {
+  /** 人物 / 怪物 */
+  actor: 0.9,
+  /** 镜头前近景树，须大于 actor */
+  fgTree: 4.5,
+} as const;
+
+/** 把关卡表里的旧世界 Y 对齐到当前地面顶面。 */
+export function alignLegacyY(y: number): number {
+  return y - (LEGACY_GROUND_TOP - WORLD.groundTop);
+}
+
+/** 主地面碰撞块（y≈0 且厚度接近 groundTop）。 */
+export function isMainGround(y: number, h: number): boolean {
+  return y <= 0 && h >= WORLD.groundTop * 0.8;
+}
 
 export const DAY_NIGHT = {
   /** 完整昼夜周期（秒）；日月各走半周 */

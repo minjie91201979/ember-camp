@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { WORLD } from '../game/config';
 import { PALETTE } from './palette';
 import { cloneRepeat, type P0Textures } from './textures';
 
@@ -64,7 +65,7 @@ export function createRiver(
 
   const top = new THREE.Mesh(new THREE.PlaneGeometry(w, 2.6), topMat);
   top.rotation.x = -Math.PI / 2;
-  top.position.set(cx, 0.52, 0.15);
+  top.position.set(cx, WORLD.groundTop - 0.48, 0.15);
   group.add(top);
 
   const streak = new THREE.Mesh(new THREE.PlaneGeometry(w, 8.6), streakMat);

@@ -36,6 +36,8 @@ export type BeastRig = {
   legs: THREE.Group[];
   armL?: THREE.Group;
   armR?: THREE.Group;
+  /** 翼、尾、螯、刺等可摆动部件 */
+  extras?: THREE.Object3D[];
   mats: THREE.MeshStandardMaterial[];
 };
 
@@ -1150,5 +1152,8 @@ function resetBeast(rig: BeastRig): void {
   }
   if (rig.armR) {
     rig.armR.rotation.set(0, 0, 0);
+  }
+  for (const extra of rig.extras ?? []) {
+    extra.rotation.set(0, 0, 0);
   }
 }

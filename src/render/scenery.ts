@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { WORLD, SCENE_Z, isMainGround } from '../game/config';
 import type { Rect } from '../game/types';
 import { PALETTE } from './palette';
 import type { P0Textures } from './textures';
@@ -521,7 +522,7 @@ export function scatterGroundDressing(
   const group = new THREE.Group();
   let seed = 80;
   for (const plat of platforms) {
-    if (plat.y > 0 || plat.h < 0.8) {
+    if (!isMainGround(plat.y, plat.h)) {
       continue;
     }
     if (showTrees) {
@@ -531,7 +532,7 @@ export function scatterGroundDressing(
         const tree = createBigTree(0.85 + hash(seed) * 0.45, tex.bark, tex.leaf);
         tintTreeGroup(tree, leafTint, barkTint);
         const x = plat.x + 1.2 + (i + 0.3) * (plat.w / (treeCount + 0.4));
-        tree.position.set(x, 1, -0.85 - hash(seed + 1) * 0.15);
+        tree.position.set(x, WORLD.groundTop, -0.85 - hash(seed + 1) * 0.15);
         group.add(tree);
       }
     }
@@ -540,7 +541,7 @@ export function scatterGroundDressing(
       seed += 1;
       const clump = createGrassClump(seed, tex.grass);
       tintMeshMaterials(clump, leafTint);
-      clump.position.set(plat.x + 0.6 + i * (plat.w / grassCount), 1, (hash(seed) - 0.5) * 1.1);
+      clump.position.set(plat.x + 0.6 + i * (plat.w / grassCount), WORLD.groundTop, (hash(seed) - 0.5) * 1.1);
       group.add(clump);
     }
     const rockCount = Math.max(1, Math.floor(plat.w / 3.2));
@@ -549,18 +550,27 @@ export function scatterGroundDressing(
       const stone = createStone(seed, tex.rock);
       stone.position.set(
         plat.x + 0.8 + hash(seed + 8) * (plat.w - 1.6),
-        1,
+        WORLD.groundTop,
         (hash(seed + 9) - 0.5) * 0.9,
       );
       group.add(stone);
     }
   }
   if (showTrees) {
-    const fgTrees = [-1.4, 15.2, 24.6, 37.5];
-    for (const [i, x] of fgTrees.entries()) {
+    const fgXs: number[] = [];
+    for (const plat of platforms) {
+      if (!isMainGround(plat.y, plat.h) || plat.w < 7) {
+        continue;
+      }
+      fgXs.push(plat.x + plat.w * 0.28);
+      if (plat.w > 16) {
+        fgXs.push(plat.x + plat.w * 0.72);
+      }
+    }
+    for (const [i, x] of fgXs.entries()) {
       const tree = createBigTree(1.15 + hash(i + 200) * 0.25, tex.bark, tex.leaf);
       tintTreeGroup(tree, leafTint, barkTint);
-      tree.position.set(x, 1, 1.15);
+      tree.position.set(x, WORLD.groundTop, SCENE_Z.fgTree);
       group.add(tree);
     }
   }

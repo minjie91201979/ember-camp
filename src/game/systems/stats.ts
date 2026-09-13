@@ -310,5 +310,5 @@ export function xpForKill(dummy: { xpReward?: number; elite?: boolean; kind: str
   if (dummy.elite) {
     return 90;
   }
-  return dummy.kind === 'treant' ? 42 : 28;
+  return 28;
 }

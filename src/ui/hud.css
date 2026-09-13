@@ -1892,3 +1892,296 @@ kbd {
   }
 }
 
+
+
+/* MOBILE_HUD_LAYOUT */
+@media (max-width: 768px) {
+  .hud {
+    padding: max(10px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right))
+      max(10px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  }
+
+  .hud__brand {
+    max-width: min(200px, 46vw);
+    padding: 8px 10px 10px;
+  }
+
+  .hud__brand h1 {
+    font-size: 15px;
+    letter-spacing: 0.08em;
+  }
+
+  .hud__kicker {
+    font-size: 9px;
+  }
+
+  .minimap {
+    top: max(10px, env(safe-area-inset-top));
+    right: max(10px, env(safe-area-inset-right));
+    width: 108px;
+    padding: 5px;
+  }
+
+  .minimap__frame {
+    height: 56px;
+  }
+
+  .bossbar {
+    top: max(8px, env(safe-area-inset-top));
+    width: min(360px, calc(100vw - 24px));
+    padding: 6px 8px 8px;
+  }
+
+  .hud__dock {
+    max-width: min(420px, calc(100vw - 24px));
+    gap: 8px;
+  }
+
+  .hud__vitals {
+    width: min(220px, 58vw);
+  }
+
+  .hud__bar {
+    grid-template-columns: 28px 1fr 40px;
+    gap: 6px;
+  }
+
+  .hud__skills {
+    gap: 6px;
+    flex-wrap: wrap;
+    max-width: calc(100vw - 24px);
+  }
+
+  .hud__slot {
+    width: 46px;
+    height: 44px;
+    min-width: 44px;
+    min-height: 44px;
+  }
+
+  .hud__keys {
+    font-size: 10px;
+  }
+
+  .inv {
+    top: max(56px, calc(env(safe-area-inset-top) + 48px));
+    right: max(8px, env(safe-area-inset-right));
+    left: max(8px, env(safe-area-inset-left));
+    width: auto;
+    max-width: none;
+    max-height: calc(100% - 72px);
+    padding: 12px;
+  }
+
+  .panel,
+  .panel--spec,
+  .panel--worldmap {
+    width: min(100%, calc(100vw - 16px)) !important;
+    max-height: calc(100vh - 24px);
+    overflow: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .death,
+  .levelup-prompt {
+    min-width: 0;
+    width: min(320px, calc(100vw - 24px));
+    padding: 16px 14px;
+  }
+
+  .hud__save button,
+  .camp__buy button,
+  .panel__actions button,
+  .inv__sort {
+    min-height: 40px;
+    padding: 8px 12px;
+  }
+
+  .spec__list {
+    grid-template-columns: 1fr;
+  }
+
+  .hud__tutorial,
+  .hud__prompt {
+    max-width: calc(100vw - 24px);
+    font-size: 11px;
+  }
+}
+
+@media (max-width: 480px) {
+  .hud__brand {
+    display: none;
+  }
+
+  .minimap {
+    width: 92px;
+  }
+
+  .minimap__frame {
+    height: 48px;
+  }
+
+  .hud__vitals {
+    width: min(200px, 70vw);
+  }
+
+  .hud__slot {
+    width: 42px;
+    height: 42px;
+  }
+
+  .hud__keys li span:not(kbd) {
+    display: none;
+  }
+}
+
+@media (max-height: 480px) and (orientation: landscape) {
+  .hud {
+    padding: 6px 10px;
+  }
+
+  .hud__brand {
+    display: none;
+  }
+
+  .minimap {
+    width: 88px;
+    top: 6px;
+    right: 8px;
+  }
+
+  .minimap__frame {
+    height: 44px;
+  }
+
+  .bossbar {
+    top: 4px;
+    width: min(280px, 46vw);
+  }
+
+  .inv {
+    top: 8px;
+    max-height: calc(100% - 16px);
+  }
+
+  .hud__skills {
+    gap: 4px;
+  }
+
+  .hud__slot {
+    width: 40px;
+    height: 38px;
+  }
+}
+
+/* —— 移动端作战界面：藏桌面冗余 —— */
+.hud__compact {
+  display: none;
+}
+
+@media (max-width: 900px), (pointer: coarse) {
+  .hud__compact {
+    display: flex;
+    pointer-events: none;
+    position: absolute;
+    top: max(8px, env(safe-area-inset-top));
+    left: max(10px, env(safe-area-inset-left));
+    z-index: 4;
+    max-width: min(52vw, 220px);
+    flex-wrap: wrap;
+    gap: 4px 8px;
+    padding: 5px 8px;
+    border: 1px solid rgb(45 52 58 / 80%);
+    border-radius: 6px;
+    background: rgb(12 16 22 / 72%);
+    font-size: 11px;
+    color: #c9d4d8;
+  }
+
+  .hud__compact-dot {
+    color: #d4a574;
+  }
+
+  .hud__brand,
+  .hud__skills,
+  .hud__keys,
+  .hud__save,
+  .minimap__legend,
+  .bossbar__hint,
+  .hud__qa {
+    display: none !important;
+  }
+
+  .hud {
+    padding: max(8px, env(safe-area-inset-top)) max(8px, env(safe-area-inset-right))
+      max(8px, env(safe-area-inset-bottom)) max(8px, env(safe-area-inset-left));
+    justify-content: flex-start;
+  }
+
+  .hud__dock {
+    position: absolute;
+    left: max(8px, env(safe-area-inset-left));
+    top: calc(max(8px, env(safe-area-inset-top)) + 36px);
+    bottom: auto;
+    max-width: min(200px, 44vw);
+    gap: 6px;
+  }
+
+  .hud__vitals {
+    width: 100%;
+  }
+
+  .hud__bar {
+    grid-template-columns: 28px 1fr 36px;
+    gap: 4px;
+  }
+
+  .hud__bar-label,
+  .hud__bar-num {
+    font-size: 10px;
+  }
+
+  .hud__bar-track {
+    height: 8px;
+  }
+
+  .minimap {
+    top: max(44px, calc(env(safe-area-inset-top) + 36px));
+    right: max(8px, env(safe-area-inset-right));
+    width: 78px;
+    padding: 4px;
+  }
+
+  .minimap__frame {
+    height: 42px;
+  }
+
+  .bossbar {
+    top: max(40px, calc(env(safe-area-inset-top) + 32px));
+    width: min(280px, calc(100vw - 180px));
+    padding: 5px 8px 6px;
+  }
+
+  .bossbar__head {
+    font-size: 11px;
+    margin-bottom: 4px;
+  }
+
+  .hud__prompt kbd,
+  .death__btn kbd,
+  .hud__tutorial kbd {
+    display: none;
+  }
+
+  .hud__prompt,
+  .hud__tutorial,
+  .hud__levelup,
+  .hud__down {
+    font-size: 11px;
+    max-width: min(220px, 48vw);
+  }
+
+  .zone-announce {
+    transform: scale(0.88);
+  }
+}

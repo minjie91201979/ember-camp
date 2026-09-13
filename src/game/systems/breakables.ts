@@ -1,4 +1,5 @@
 import { sfx } from '../../audio/sfx';
+import { alignLegacyY } from '../config';
 import { ZONES, zonePlatforms } from '../data/zones';
 import type { BreakableProp, World } from '../types';
 import { BOSS_GATE_H, BOSS_GATE_W } from './boss-encounter';
@@ -15,7 +16,7 @@ export function createBreakablesFromZone(zoneId: string): BreakableProp[] {
     .map((p) => ({
       id: p.id,
       x: p.x + p.w / 2,
-      y: p.y,
+      y: alignLegacyY(p.y),
       w: p.w,
       h: p.h,
       hp: 18,

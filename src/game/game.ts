@@ -1,4 +1,4 @@
-import { bgm } from '../audio/bgm';
+﻿import { bgm } from '../audio/bgm';
 import { Keyboard } from '../input/keyboard';
 import { GameRenderer } from '../render/game-renderer';
 import { CLASS_DEFS, type PlayerClassId } from './data/classes';
@@ -156,6 +156,11 @@ export class Game {
     }
     this.running = true;
     void this.boot();
+  }
+
+  /** Touch pad / UI injects virtual input through this Keyboard. */
+  getKeyboard(): Keyboard {
+    return this.input;
   }
 
   respawn(choice: RespawnChoice): void {
@@ -465,7 +470,7 @@ export class Game {
     this.input.attach();
     window.addEventListener('resize', this.onResize);
     window.addEventListener('keydown', this.unlockAudio);
-    this.canvas.addEventListener('mousedown', this.onMouse);
+    this.canvas.addEventListener('pointerdown', this.onMouse);
     this.canvas.addEventListener('contextmenu', this.onContext);
     this.fitCanvas();
     this.lastMs = performance.now();
@@ -478,7 +483,7 @@ export class Game {
     this.input.detach();
     window.removeEventListener('resize', this.onResize);
     window.removeEventListener('keydown', this.unlockAudio);
-    this.canvas.removeEventListener('mousedown', this.onMouse);
+    this.canvas.removeEventListener('pointerdown', this.onMouse);
     this.canvas.removeEventListener('contextmenu', this.onContext);
     bgm.stop();
     this.view.dispose();

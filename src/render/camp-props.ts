@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { WORLD } from '../game/config';
 import { createFlameMat } from './campfire';
 import { PALETTE } from './palette';
 import { cloneRepeat, type P0Textures } from './textures';
@@ -31,7 +32,7 @@ function addFlame(
   z: number,
   scale: number,
 ): THREE.ShaderMaterial[] {
-  const mats = [createFlameMat(0.95), createFlameMat(0.55)];
+  const mats = [createFlameMat(0.95, x * 12.9898 + z * 78.233), createFlameMat(0.55, x * 4.1414 + z * 9.77 + 7.3)];
   const a = new THREE.Mesh(new THREE.PlaneGeometry(0.28 * scale, 0.42 * scale), mats[0]);
   a.position.set(x, y, z);
   const b = new THREE.Mesh(new THREE.PlaneGeometry(0.2 * scale, 0.34 * scale), mats[1]);
@@ -92,7 +93,7 @@ export function createForge(tex: P0Textures): PropView {
   glow.position.set(0.2, 0.7, 0.7);
   group.add(glow);
 
-  group.position.set(3.0, 1, -0.15);
+  group.position.set(3.0, WORLD.groundTop, -0.15);
 
   return {
     group,
@@ -181,7 +182,7 @@ export function createStall(tex: P0Textures): PropView {
   sack.position.set(0.08, 0.74, 0.18);
   group.add(crate, jug, sack);
 
-  group.position.set(7.9, 1, -0.2);
+  group.position.set(7.9, WORLD.groundTop, -0.2);
 
   return {
     group,
@@ -262,7 +263,7 @@ export function createWeaponsmithStall(tex: P0Textures): PropView {
   canopy.position.set(0, 1.22, 0.02);
   group.add(canopy);
 
-  group.position.set(5.5, 1, -0.16);
+  group.position.set(5.5, WORLD.groundTop, -0.16);
 
   return {
     group,
@@ -343,7 +344,7 @@ export function createApothecaryStall(tex: P0Textures): PropView {
     group.add(vial);
   }
 
-  group.position.set(10.3, 1, -0.18);
+  group.position.set(10.3, WORLD.groundTop, -0.18);
 
   return {
     group,
@@ -371,7 +372,7 @@ export function createTorch(tex: P0Textures, x: number): PropView {
   const glow = new THREE.PointLight(PALETTE.ember, 2.2, 8, 1.1);
   glow.position.set(0, 1.35, 0.35);
   group.add(glow);
-  group.position.set(x, 1, 0.12);
+  group.position.set(x, WORLD.groundTop, 0.12);
 
   return {
     group,

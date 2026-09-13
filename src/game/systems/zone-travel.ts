@@ -1,4 +1,4 @@
-import { WORLD } from '../config';
+import { WORLD, alignLegacyY } from '../config';
 import { START_ZONE_ID, ZONES, zonePlatforms, type ZoneDef } from '../data/zones';
 import { ENEMY_DEFS } from '../data/enemy-defs';
 import { createBreakablesFromZone } from './breakables';
@@ -85,19 +85,19 @@ const ZONE_BOSS_FRONT: Record<
   string,
   { travelId: string; bossId: string; x: number; y: number }
 > = {
-  a01: { travelId: 'a01-gate', bossId: 'rotwood', x: 38.2, y: 1.15 },
-  a02: { travelId: 'a02-boss', bossId: 'rock-warden', x: 34.2, y: 1.15 },
-  a03: { travelId: 'a03-boss', bossId: 'tide-crab', x: 36.2, y: 1.15 },
-  a04: { travelId: 'a04-boss', bossId: 'cinder-lizard', x: 35.6, y: 1.15 },
-  a05: { travelId: 'a05-boss', bossId: 'bog-mother', x: 36.0, y: 1.15 },
-  a06: { travelId: 'a06-boss', bossId: 'frostfang', x: 36.2, y: 1.15 },
-  a07: { travelId: 'a07-boss', bossId: 'storm-scorpion', x: 36.0, y: 1.15 },
-  a08: { travelId: 'a08-boss', bossId: 'golem-mage', x: 36.2, y: 1.15 },
-  a09: { travelId: 'a09-boss', bossId: 'tide-lord', x: 36.4, y: 1.15 },
-  a10: { travelId: 'a10-boss', bossId: 'rockwing', x: 36.2, y: 1.15 },
-  a11: { travelId: 'a11-boss', bossId: 'rift-warden', x: 36.0, y: 1.15 },
-  a12: { travelId: 'a12-boss', bossId: 'end-king', x: 36.4, y: 1.15 },
-  a13: { travelId: 'a13-boss', bossId: 'ember-tyrant', x: 36.4, y: 1.15 },
+  a01: { travelId: 'a01-gate', bossId: 'rotwood', x: 71.2, y: WORLD.spawnY },
+  a02: { travelId: 'a02-boss', bossId: 'rock-warden', x: 78.8, y: WORLD.spawnY },
+  a03: { travelId: 'a03-boss', bossId: 'tide-crab', x: 78.8, y: WORLD.spawnY },
+  a04: { travelId: 'a04-boss', bossId: 'cinder-lizard', x: 78.8, y: WORLD.spawnY },
+  a05: { travelId: 'a05-boss', bossId: 'bog-mother', x: 78.8, y: WORLD.spawnY },
+  a06: { travelId: 'a06-boss', bossId: 'frostfang', x: 78.8, y: WORLD.spawnY },
+  a07: { travelId: 'a07-boss', bossId: 'storm-scorpion', x: 78.8, y: WORLD.spawnY },
+  a08: { travelId: 'a08-boss', bossId: 'golem-mage', x: 78.8, y: WORLD.spawnY },
+  a09: { travelId: 'a09-boss', bossId: 'tide-lord', x: 78.8, y: WORLD.spawnY },
+  a10: { travelId: 'a10-boss', bossId: 'rockwing', x: 78.8, y: WORLD.spawnY },
+  a11: { travelId: 'a11-boss', bossId: 'rift-warden', x: 78.8, y: WORLD.spawnY },
+  a12: { travelId: 'a12-boss', bossId: 'end-king', x: 78.8, y: WORLD.spawnY },
+  a13: { travelId: 'a13-boss', bossId: 'ember-tyrant', x: 78.8, y: WORLD.spawnY },
 };
 
 export function isBossFrontUnlocked(world: World, zoneId: string): boolean {
@@ -209,7 +209,7 @@ export function listTravelNodes(world: World): TravelNode[] {
   if (isZoneUnlocked(world, 'a01')) {
     nodes.push(
       { id: 'a01-camp', label: '烬营出生点', zoneId: 'a01', x: WORLD.spawnX, y: WORLD.spawnY },
-      { id: 'a01-mid', label: '林地中段', zoneId: 'a01', x: 26.2, y: 1.15, localOnly: true },
+      { id: 'a01-mid', label: '林地中段', zoneId: 'a01', x: 34.0, y: WORLD.spawnY, localOnly: true },
     );
   }
   if (isZoneUnlocked(world, 'a02')) {
@@ -219,14 +219,14 @@ export function listTravelNodes(world: World): TravelNode[] {
         label: '荒石矿坑',
         zoneId: 'a02',
         x: 1.2,
-        y: 1.15,
+        y: WORLD.spawnY,
       },
       {
         id: 'a02-mid',
         label: '矿坑中段',
         zoneId: 'a02',
-        x: 20.4,
-        y: 1.15,
+        x: 42.4,
+        y: WORLD.spawnY,
         localOnly: true,
       },
     );
@@ -238,14 +238,14 @@ export function listTravelNodes(world: World): TravelNode[] {
         label: '潮汐海滩',
         zoneId: 'a03',
         x: 1.3,
-        y: 1.15,
+        y: WORLD.spawnY,
       },
       {
         id: 'a03-mid',
         label: '礁石带',
         zoneId: 'a03',
-        x: 28.4,
-        y: 1.15,
+        x: 42.4,
+        y: WORLD.spawnY,
         localOnly: true,
       },
     );
@@ -257,14 +257,14 @@ export function listTravelNodes(world: World): TravelNode[] {
         label: '焦土丘陵',
         zoneId: 'a04',
         x: 1.2,
-        y: 1.15,
+        y: WORLD.spawnY,
       },
       {
         id: 'a04-mid',
         label: '灰烬脊',
         zoneId: 'a04',
-        x: 17.0,
-        y: 1.15,
+        x: 42.4,
+        y: WORLD.spawnY,
         localOnly: true,
       },
     );
@@ -276,14 +276,14 @@ export function listTravelNodes(world: World): TravelNode[] {
         label: '幽影沼泽',
         zoneId: 'a05',
         x: 1.25,
-        y: 1.15,
+        y: WORLD.spawnY,
       },
       {
         id: 'a05-mid',
         label: '泥沼深处',
         zoneId: 'a05',
-        x: 17.3,
-        y: 1.15,
+        x: 42.4,
+        y: WORLD.spawnY,
         localOnly: true,
       },
     );
@@ -295,14 +295,14 @@ export function listTravelNodes(world: World): TravelNode[] {
         label: '霜风雪原',
         zoneId: 'a06',
         x: 1.2,
-        y: 1.15,
+        y: WORLD.spawnY,
       },
       {
         id: 'a06-mid',
         label: '雪脊',
         zoneId: 'a06',
-        x: 16.7,
-        y: 1.15,
+        x: 42.4,
+        y: WORLD.spawnY,
         localOnly: true,
       },
     );
@@ -314,14 +314,14 @@ export function listTravelNodes(world: World): TravelNode[] {
         label: '赤沙峡谷',
         zoneId: 'a07',
         x: 1.25,
-        y: 1.15,
+        y: WORLD.spawnY,
       },
       {
         id: 'a07-mid',
         label: '峡谷中段',
         zoneId: 'a07',
-        x: 16.6,
-        y: 1.15,
+        x: 42.4,
+        y: WORLD.spawnY,
         localOnly: true,
       },
     );
@@ -333,14 +333,14 @@ export function listTravelNodes(world: World): TravelNode[] {
         label: '坠星废墟',
         zoneId: 'a08',
         x: 1.2,
-        y: 1.15,
+        y: WORLD.spawnY,
       },
       {
         id: 'a08-mid',
         label: '庭院',
         zoneId: 'a08',
-        x: 16.5,
-        y: 1.15,
+        x: 42.4,
+        y: WORLD.spawnY,
         localOnly: true,
       },
     );
@@ -352,14 +352,14 @@ export function listTravelNodes(world: World): TravelNode[] {
         label: '暗潮地窟',
         zoneId: 'a09',
         x: 1.2,
-        y: 1.15,
+        y: WORLD.spawnY,
       },
       {
         id: 'a09-mid',
         label: '隧洞深处',
         zoneId: 'a09',
-        x: 16.2,
-        y: 1.15,
+        x: 42.4,
+        y: WORLD.spawnY,
         localOnly: true,
       },
     );
@@ -371,14 +371,14 @@ export function listTravelNodes(world: World): TravelNode[] {
         label: '龙脊山脉',
         zoneId: 'a10',
         x: 1.2,
-        y: 1.15,
+        y: WORLD.spawnY,
       },
       {
         id: 'a10-mid',
         label: '山脊隘口',
         zoneId: 'a10',
-        x: 16.1,
-        y: 1.15,
+        x: 42.4,
+        y: WORLD.spawnY,
         localOnly: true,
       },
     );
@@ -390,14 +390,14 @@ export function listTravelNodes(world: World): TravelNode[] {
         label: '虚空裂隙',
         zoneId: 'a11',
         x: 1.2,
-        y: 1.15,
+        y: WORLD.spawnY,
       },
       {
         id: 'a11-mid',
         label: '裂隙中段',
         zoneId: 'a11',
-        x: 15.8,
-        y: 1.15,
+        x: 42.4,
+        y: WORLD.spawnY,
         localOnly: true,
       },
     );
@@ -409,14 +409,14 @@ export function listTravelNodes(world: World): TravelNode[] {
         label: '终焉王座',
         zoneId: 'a12',
         x: 1.2,
-        y: 1.15,
+        y: WORLD.spawnY,
       },
       {
         id: 'a12-mid',
         label: '王座前厅',
         zoneId: 'a12',
-        x: 15.7,
-        y: 1.15,
+        x: 42.4,
+        y: WORLD.spawnY,
         localOnly: true,
       },
     );
@@ -428,14 +428,14 @@ export function listTravelNodes(world: World): TravelNode[] {
         label: '余烬祭坛',
         zoneId: 'a13',
         x: 1.2,
-        y: 1.15,
+        y: WORLD.spawnY,
       },
       {
         id: 'a13-mid',
         label: '祭坛前庭',
         zoneId: 'a13',
-        x: 15.7,
-        y: 1.15,
+        x: 42.4,
+        y: WORLD.spawnY,
         localOnly: true,
       },
     );
@@ -521,13 +521,13 @@ export function populateZone(
   world.zoneId = zone.id;
   world.kitTheme = zone.theme;
   world.rivers = zone.rivers.map((r) => ({ ...r }));
-  world.banners = zone.banners.map((b) => ({ ...b }));
+  world.banners = zone.banners.map((b) => ({ ...b, y: alignLegacyY(b.y) }));
   world.dummies = zone.spawns.map((spawn, i) =>
     createDummyFromSpawn(
       i + 1,
       spawn.enemyId,
       spawn.x,
-      spawn.y,
+      alignLegacyY(spawn.y),
       spawn.patrolMin,
       spawn.patrolMax,
       { ngPlusLevel: world.ngPlusLevel },
@@ -557,7 +557,7 @@ export function populateZone(
   world.exploreTrail = [];
 
   const x = spawnX ?? zone.spawns[0]?.x ?? WORLD.spawnX;
-  const y = spawnY ?? 1.15;
+  const y = spawnY ?? WORLD.spawnY;
   const p = world.player;
   p.x = x;
   p.y = y;
@@ -568,7 +568,7 @@ export function populateZone(
   p.iFrame = 0.6;
   if (zone.banners[0]) {
     p.bannerX = zone.banners[0].x;
-    p.bannerY = zone.banners[0].y;
+    p.bannerY = alignLegacyY(zone.banners[0].y);
   }
 }
 

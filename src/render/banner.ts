@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { WORLD } from '../game/config';
 import { PALETTE } from './palette';
 import { cloneRepeat, type P0Textures } from './textures';
 
@@ -89,7 +90,7 @@ export function createBanner(tex: P0Textures, x = 2.35): BannerView {
   glow.position.set(0.35, 1.7, 0.4);
   group.add(glow);
 
-  group.position.set(x, 1, 0.22);
+  group.position.set(x, WORLD.groundTop, 0.22);
 
   return {
     group,

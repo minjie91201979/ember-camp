@@ -1,7 +1,9 @@
 import * as THREE from 'three';
+import { alignLegacyY } from '../game/config';
 import { KIT_THEMES, type KitPiece, type KitThemeId } from '../game/data/level-kit';
 import { sceneThemeOf } from '../game/data/scene-themes';
 import { PALETTE } from './palette';
+import { createZoneLandmark } from './landmarks';
 import { cloneRepeat, type P0Textures } from './textures';
 
 export function placeKitDecor(
@@ -19,6 +21,8 @@ export function placeKitDecor(
       root.add(makeSecretWall(piece, scene.leafTint, tex));
     } else if (piece.kind === 'backdrop') {
       root.add(makeBackdrop(piece, scene.breakableTint, tex));
+    } else if (piece.kind === 'landmark' && piece.prop) {
+      root.add(createZoneLandmark(piece.prop, piece.x + piece.w / 2, alignLegacyY(piece.y), tex));
     }
   }
   return root;
@@ -44,7 +48,7 @@ function makeSlope(
   mesh.rotation.z = angle;
   mesh.position.set(
     piece.x + piece.w / 2,
-    piece.y + rise / 2 + piece.h * 0.35,
+    alignLegacyY(piece.y) + rise / 2 + piece.h * 0.35,
     -0.05,
   );
   mesh.castShadow = true;
@@ -65,7 +69,7 @@ function makeSecretWall(piece: KitPiece, tint: number, tex: P0Textures): THREE.M
     }),
   );
   // 略靠镜头前方，避免与平台侧面穿插；仍无碰撞
-  mesh.position.set(piece.x + piece.w / 2, piece.y + piece.h / 2, 0.35);
+  mesh.position.set(piece.x + piece.w / 2, alignLegacyY(piece.y) + piece.h / 2, 0.35);
   return mesh;
 }
 
@@ -78,7 +82,7 @@ function makeBackdrop(piece: KitPiece, tint: number, tex: P0Textures): THREE.Mes
       roughness: 0.92,
     }),
   );
-  mesh.position.set(piece.x + piece.w / 2, piece.y + piece.h / 2, -0.35);
+  mesh.position.set(piece.x + piece.w / 2, alignLegacyY(piece.y) + piece.h / 2, -0.35);
   mesh.castShadow = true;
   return mesh;
 }

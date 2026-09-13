@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { WORLD } from '../game/config';
 import { PALETTE } from './palette';
 import { cloneRepeat, type P0Textures } from './textures';
 
@@ -92,6 +93,6 @@ export function createPalisade(tex: P0Textures): THREE.Group {
     addRail(group, wood, new THREE.Vector3(a[0], 0, a[1]), new THREE.Vector3(b[0], 0, b[1]), 1.12);
   }
 
-  group.position.y = 1;
+  group.position.y = WORLD.groundTop;
   return group;
 }

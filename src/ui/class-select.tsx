@@ -121,7 +121,7 @@ export function ClassSelect({ onSelect, onContinue, hasSave }: Props): JSX.Eleme
             style={{ '--accent': accent } as CSSProperties}
           >
             <ClassModelPreview classId={focus} />
-            <span className="class-select__model-hint">点击左栏切换职业预览</span>
+            <span className="class-select__model-hint">点选职业预览</span>
           </section>
 
           <section

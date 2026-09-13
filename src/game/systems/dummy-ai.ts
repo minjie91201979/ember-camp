@@ -4,7 +4,7 @@ import { stepEliteAffixes } from './elite-affixes';
 import { createDummyFromSpawn, countAliveAdds, spawnEliteAffixAdd } from './enemy-spawn';
 import { stepEnemyBehavior, stepProjectiles } from './enemy-behaviors';
 import type { Dummy, World } from '../types';
-import type { EnemyDefId } from '../data/enemy-defs';
+import { ENEMY_DEFS, type EnemyDefId } from '../data/enemy-defs';
 
 const RESPAWN_DELAY = 12;
 const ATTACK_DURATION = 0.55;
@@ -19,6 +19,11 @@ export function stepDummies(world: World, dt: number): void {
   stepBreakables(world, dt);
   const px = world.player.x;
   for (const dummy of world.dummies) {
+    const def = ENEMY_DEFS[dummy.enemyId as EnemyDefId];
+    if (def && (dummy.kind !== def.kind || dummy.behavior !== def.behavior)) {
+      dummy.kind = def.kind;
+      dummy.behavior = def.behavior;
+    }
     dummy.flash = Math.max(0, dummy.flash - dt);
     dummy.stunT = Math.max(0, dummy.stunT - dt);
     dummy.chillT = Math.max(0, (dummy.chillT ?? 0) - dt);

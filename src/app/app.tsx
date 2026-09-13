@@ -5,6 +5,7 @@ import type { PlayerClassId } from '../game/data/classes';
 import type { HudSnapshot } from '../game/types';
 import { ClassSelect } from '../ui/class-select';
 import { Hud } from '../ui/hud';
+import { TouchControls } from '../ui/touch-controls';
 import './app.css';
 
 const START_VITALS: HudSnapshot = {
@@ -207,6 +208,8 @@ export function App(): JSX.Element {
           style={{ visibility: playing ? 'visible' : 'hidden' }}
         />
         {playing ? (
+          <>
+          <TouchControls gameRef={gameRef} visible={playing} />
           <Hud
             vitals={vitals}
             onRespawn={(choice) => gameRef.current?.respawn(choice)}
@@ -250,6 +253,7 @@ export function App(): JSX.Element {
             onPauseOpenChar={() => gameRef.current?.openCharFromPause()}
             onPauseOpenSkills={() => gameRef.current?.openSkillsFromPause()}
           />
+          </>
         ) : (
           <ClassSelect
             hasSave={saveExists}

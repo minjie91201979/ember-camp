@@ -1,4 +1,5 @@
 import { sfx } from '../../audio/sfx';
+import { alignLegacyY } from '../config';
 import { ITEM_DEFS } from '../data/item-defs';
 import { ZONES } from '../data/zones';
 import type { World } from '../types';
@@ -19,7 +20,7 @@ export function syncSecretProximity(world: World): void {
     if (world.secretsClaimed[secret.id]) {
       continue;
     }
-    if (Math.hypot(secret.x - px, secret.y - py) < SECRET_RANGE) {
+    if (Math.hypot(secret.x - px, alignLegacyY(secret.y) - py) < SECRET_RANGE) {
       world.nearbySecretId = secret.id;
       return;
     }
@@ -47,7 +48,7 @@ export function tryClaimSecret(world: World): boolean {
   const def = ITEM_DEFS[secret.rewardDefId];
   const itemName = def?.name ?? secret.rewardDefId;
   const qty = secret.rewardQty > 1 ? ` ×${secret.rewardQty}` : '';
-  spawnLootFlyAt(world, secret.x, secret.y + 0.55, 'item', def?.quality ?? 'common');
+  spawnLootFlyAt(world, secret.x, alignLegacyY(secret.y) + 0.55, 'item', def?.quality ?? 'common');
   world.levelToastT = 2.0;
   world.levelToastText = `发现秘密 · ${itemName}${qty}`;
   sfx.play('levelup');

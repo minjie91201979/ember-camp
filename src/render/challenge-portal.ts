@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { WORLD } from '../game/config';
 import type { PropView } from './camp-props';
 import { PALETTE } from './palette';
 import { cloneRepeat, type P0Textures } from './textures';
@@ -160,7 +161,7 @@ export function createChallengePortal(tex: P0Textures, x = -2.6): PropView {
   light.position.set(0, 1.2, 0.55);
   group.add(light);
 
-  group.position.set(x, 1, 0.08);
+  group.position.set(x, WORLD.groundTop, 0.08);
 
   return {
     group,

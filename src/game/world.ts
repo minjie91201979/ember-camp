@@ -7,7 +7,7 @@ import { createStarterSkills, createStarterSkillBar } from './systems/skills';
 import { defaultUnlockedZones } from './systems/zone-travel';
 import { xpToNextLevel } from './systems/stats';
 import type { Player, World } from './types';
-import { PLAYER, WORLD } from './config';
+import { PLAYER, WORLD, alignLegacyY } from './config';
 
 export function createPlayer(classId: PlayerClassId = 'warrior'): Player {
   const cls = CLASS_DEFS[classId];
@@ -83,7 +83,7 @@ export function createPlayer(classId: PlayerClassId = 'warrior'): Player {
     awaitRespawn: false,
     hasBanner: true,
     bannerX: 2.35,
-    bannerY: 1,
+    bannerY: WORLD.groundTop,
     levelFxT: 0,
     weaponEnhance: 0,
     attrResetCount: 0,
@@ -109,13 +109,20 @@ export function createWorld(zoneId = START_ZONE_ID, classId: PlayerClassId = 'wa
   const zone = ZONES[zoneId] ?? ZONES[START_ZONE_ID];
   const starter = createStarterInventory(classId);
   const dummies = zone.spawns.map((spawn, i) =>
-    createDummyFromSpawn(i + 1, spawn.enemyId, spawn.x, spawn.y, spawn.patrolMin, spawn.patrolMax),
+    createDummyFromSpawn(
+      i + 1,
+      spawn.enemyId,
+      spawn.x,
+      alignLegacyY(spawn.y),
+      spawn.patrolMin,
+      spawn.patrolMax,
+    ),
   );
   const world: World = {
     zoneId: zone.id,
     platforms: zonePlatforms(zone),
     rivers: zone.rivers.map((r) => ({ ...r })),
-    banners: zone.banners.map((b) => ({ ...b })),
+    banners: zone.banners.map((b) => ({ ...b, y: alignLegacyY(b.y) })),
     player: createPlayer(classId),
     dummyId: dummies.length,
     hazards: [],

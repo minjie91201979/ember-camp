@@ -1,3 +1,4 @@
+import { WORLD } from '../config';
 import {
   eliteAffixHintsOf,
   eliteAffixLabel,
@@ -131,7 +132,7 @@ export function onEliteDeath(world: World, dummy: Dummy): void {
   }
   pushHazard(world, {
     x: dummy.x - VOLATILE_BLAST * 0.5,
-    y: 1,
+    y: WORLD.groundTop,
     w: VOLATILE_BLAST,
     h: 0.65,
     windup: 0.05,
@@ -168,7 +169,7 @@ function beginFrostNova(world: World, dummy: Dummy): void {
   for (const x of spots) {
     pushHazard(world, {
       x: x - 0.85,
-      y: 1,
+      y: WORLD.groundTop,
       w: 1.7,
       h: 0.5,
       windup: 0.35,

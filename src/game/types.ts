@@ -11,11 +11,52 @@ export type Rect = {
   h: number;
 };
 
-export type DummyKind = 'rotwolf' | 'treant';
+/** 敌人外形族；同族用色盘区分（如腐狼 / 霜狼）。rotwolf 为旧数据别名。 */
+export type DummyKind =
+  | 'rotwolf'
+  | 'wolf'
+  | 'treant'
+  | 'spitter'
+  | 'pod'
+  | 'golem'
+  | 'bat'
+  | 'crab'
+  | 'raider'
+  | 'lizard'
+  | 'frog'
+  | 'wraith'
+  | 'lurker'
+  | 'tadpole'
+  | 'mother'
+  | 'brute'
+  | 'scorpion'
+  | 'idol'
+  | 'wisp'
+  | 'watcher'
+  | 'cultist'
+  | 'tentacle'
+  | 'lord'
+  | 'wyvern'
+  | 'shard'
+  | 'walker'
+  | 'guard'
+  | 'king';
 
 export type DummyState = 'idle' | 'walk' | 'attack' | 'dead' | 'charge' | 'fuse';
 
-export type EnemyBehavior = 'melee' | 'ranged' | 'charge' | 'suicide';
+export type EnemyBehavior = 'melee' | 'ranged' | 'charge' | 'suicide' | 'leap' | 'sting' | 'slam';
+
+export type EnemyShotVisual =
+  | 'spit'
+  | 'poison'
+  | 'flame'
+  | 'ice'
+  | 'void'
+  | 'sand'
+  | 'arcane'
+  | 'bolt';
+
+export type EnemyHitEffect = 'slow' | 'chill';
 
 export type { EliteAffixId };
 
@@ -98,7 +139,22 @@ export type Projectile = {
   /** 缺省视为敌人弹道（兼容旧逻辑）。 */
   owner?: 'enemy' | 'player';
   /** 表现用：火球 / 奥术 / 箭矢等。 */
-  visual?: 'spit' | 'fireball' | 'arcane' | 'arrow' | 'arrow-fan' | 'pyroblast' | 'ice-lance';
+  visual?:
+    | 'spit'
+    | 'poison'
+    | 'flame'
+    | 'ice'
+    | 'void'
+    | 'sand'
+    | 'bolt'
+    | 'fireball'
+    | 'arcane'
+    | 'arrow'
+    | 'arrow-fan'
+    | 'pyroblast'
+    | 'ice-lance';
+  /** 敌人弹道命中附加（减速 / 寒冰）。 */
+  hitEffect?: EnemyHitEffect;
   /** 玩家弹道对应技能（猎人箭矢区分瞄准/后跳）。 */
   playerSkill?: AttackKind;
   /** 冰枪 5 级弹射剩余次数。 */

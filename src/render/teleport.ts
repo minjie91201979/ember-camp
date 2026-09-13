@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { WORLD } from '../game/config';
 import { PALETTE } from './palette';
 import { cloneRepeat, type P0Textures } from './textures';
 
@@ -215,7 +216,7 @@ export function createTeleport(tex: P0Textures, x = -5.6): TeleportView {
   light.position.set(0, 1.1, 0.6);
   group.add(light);
 
-  group.position.set(x, 1, 0.05);
+  group.position.set(x, WORLD.groundTop, 0.05);
 
   return {
     group,

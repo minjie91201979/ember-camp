@@ -398,6 +398,17 @@ export function Hud({
     <div
       className={`hud${vitals.awaitRespawn ? ' hud--dead' : ''}${vitals.fallWarn ? ' hud--pit-warn' : ''}${vitals.settingsOpen ? ' hud--paused' : ''}`}
     >
+      <div className="hud__compact" aria-label="状态">
+        <span>{vitals.zoneName}</span>
+        <span>
+          Lv.{vitals.level}
+          {vitals.ngPlusLevel > 0 ? ` · NG+${vitals.ngPlusLevel}` : ''}
+        </span>
+        <span>{vitals.gold} 金</span>
+        {vitals.unspentAttr > 0 || vitals.unspentSkill > 0 ? (
+          <span className="hud__compact-dot">可加点</span>
+        ) : null}
+      </div>
       <header className="hud__brand">
         <p className="hud__kicker">阶段 93 · 暴风雪</p>
         <h1>烬营远征</h1>

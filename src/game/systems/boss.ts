@@ -1,3 +1,4 @@
+import { WORLD } from '../config';
 import { hurtPlayer } from './combat';
 import { createDummyFromSpawn } from './enemy-spawn';
 import { applyBossUnlock, noteBossFrontUnlockToast } from './zone-travel';
@@ -616,7 +617,7 @@ function beginRootCast(world: World, dummy: Dummy): void {
   for (const x of spots) {
     spawnHazard(world, {
       x: x - 0.55,
-      y: 1,
+      y: WORLD.groundTop,
       w: 1.1,
       h: 0.4,
       windup: ROOT_WINDUP,
@@ -646,7 +647,7 @@ function beginQuakeCast(world: World, dummy: Dummy): void {
   for (const x of spots) {
     spawnHazard(world, {
       x: x - 0.7,
-      y: 1,
+      y: WORLD.groundTop,
       w: 1.4,
       h: 0.45,
       windup: QUAKE_WINDUP,
@@ -671,7 +672,7 @@ function beginClawCast(world: World, dummy: Dummy): void {
   for (const x of spots) {
     spawnHazard(world, {
       x: x - 0.65,
-      y: 1,
+      y: WORLD.groundTop,
       w: 1.3,
       h: 0.5,
       windup: CLAW_WINDUP,
@@ -700,7 +701,7 @@ function beginWaveCast(world: World, dummy: Dummy): void {
   const vx = fromLeft ? speed : -speed;
   spawnHazard(world, {
     x: startX,
-    y: 1,
+    y: WORLD.groundTop,
     w: 1.8,
     h: 0.55,
     windup: WAVE_WINDUP,
@@ -729,7 +730,7 @@ function beginBreathCast(world: World, dummy: Dummy): void {
     const x = dummy.x + dir * (1.4 + i * 1.15) - 0.55;
     spawnHazard(world, {
       x,
-      y: 1,
+      y: WORLD.groundTop,
       w: 1.15,
       h: 0.42,
       windup: BREATH_WINDUP,
@@ -742,7 +743,7 @@ function beginBreathCast(world: World, dummy: Dummy): void {
   const tip = dummy.x + dir * (1.4 + (count - 1) * 1.15);
   spawnHazard(world, {
     x: tip - 0.7,
-    y: 1,
+    y: WORLD.groundTop,
     w: 1.4,
     h: 0.5,
     windup: BREATH_WINDUP + 0.15,
@@ -761,7 +762,7 @@ function beginFirePools(world: World, dummy: Dummy, count: number): void {
   for (const ox of offsets) {
     spawnHazard(world, {
       x: px + ox - 0.75,
-      y: 1,
+      y: WORLD.groundTop,
       w: 1.5,
       h: 0.5,
       windup: POOL_WINDUP,
@@ -790,7 +791,7 @@ function beginPoisonFog(world: World, dummy: Dummy, wide: boolean): void {
   for (const x of spots) {
     spawnHazard(world, {
       x: x - 1.1,
-      y: 1,
+      y: WORLD.groundTop,
       w: 2.2,
       h: 0.7,
       windup: FOG_WINDUP,
@@ -820,7 +821,7 @@ function beginHowlCast(world: World, dummy: Dummy): void {
   for (const x of spots) {
     spawnHazard(world, {
       x: x - 1.0,
-      y: 1,
+      y: WORLD.groundTop,
       w: 2.0,
       h: 0.55,
       windup: HOWL_WINDUP,
@@ -849,7 +850,7 @@ function beginPounceCast(world: World, dummy: Dummy): void {
     const x = dummy.x + dir * (1.3 + i * 1.2) - 0.55;
     spawnHazard(world, {
       x,
-      y: 1,
+      y: WORLD.groundTop,
       w: 1.15,
       h: 0.42,
       windup: POUNCE_WINDUP,
@@ -877,7 +878,7 @@ function beginSandstorm(world: World, dummy: Dummy, wide: boolean): void {
   for (const x of spots) {
     spawnHazard(world, {
       x: x - 1.4,
-      y: 1,
+      y: WORLD.groundTop,
       w: 2.8,
       h: 0.85,
       windup: STORM_WINDUP,
@@ -906,7 +907,7 @@ function beginTailSting(world: World, dummy: Dummy): void {
   const px = world.player.x;
   spawnHazard(world, {
     x: px - 0.7,
-    y: 1,
+    y: WORLD.groundTop,
     w: 1.4,
     h: 0.5,
     windup: STING_WINDUP,
@@ -916,7 +917,7 @@ function beginTailSting(world: World, dummy: Dummy): void {
   });
   spawnHazard(world, {
     x: px - 0.9,
-    y: 1,
+    y: WORLD.groundTop,
     w: 1.8,
     h: 0.55,
     windup: STING_WINDUP + 0.1,
@@ -945,7 +946,7 @@ function beginLaserSweep(world: World, dummy: Dummy): void {
   const vx = fromLeft ? speed : -speed;
   spawnHazard(world, {
     x: startX,
-    y: 1,
+    y: WORLD.groundTop,
     w: 1.2,
     h: 1.8,
     windup: LASER_WINDUP,
@@ -975,7 +976,7 @@ function beginPetrifyGaze(world: World, dummy: Dummy): void {
   const px = world.player.x;
   spawnHazard(world, {
     x: px - 0.8,
-    y: 1,
+    y: WORLD.groundTop,
     w: 1.6,
     h: 0.5,
     windup: GAZE_WINDUP,
@@ -1002,7 +1003,7 @@ function beginTentacleSlam(world: World, dummy: Dummy, wide: boolean): void {
   for (const x of spots) {
     spawnHazard(world, {
       x: x - 0.65,
-      y: 1,
+      y: WORLD.groundTop,
       w: 1.3,
       h: 0.85,
       windup: TENTACLE_WINDUP,
@@ -1026,7 +1027,7 @@ function beginDevourMark(world: World, dummy: Dummy): void {
   const px = world.player.x;
   spawnHazard(world, {
     x: px - 1.1,
-    y: 1,
+    y: WORLD.groundTop,
     w: 2.2,
     h: 0.7,
     windup: DEVOUR_WINDUP,
@@ -1058,7 +1059,7 @@ function beginDiveBomb(world: World, dummy: Dummy): void {
   for (const x of spots) {
     spawnHazard(world, {
       x: x - 0.85,
-      y: 1,
+      y: WORLD.groundTop,
       w: 1.7,
       h: 0.75,
       windup: DIVE_WINDUP,
@@ -1094,7 +1095,7 @@ function beginDrakeBreath(world: World, dummy: Dummy): void {
   const vx = fromLeft ? speed : -speed;
   spawnHazard(world, {
     x: startX,
-    y: 1,
+    y: WORLD.groundTop,
     w: 1.5,
     h: 1.5,
     windup: DRAKE_BREATH_WINDUP,
@@ -1107,7 +1108,7 @@ function beginDrakeBreath(world: World, dummy: Dummy): void {
   if (dummy.phase >= 2) {
     spawnHazard(world, {
       x: world.player.x - 0.9,
-      y: 1,
+      y: WORLD.groundTop,
       w: 1.8,
       h: 0.55,
       windup: DRAKE_BREATH_WINDUP + 0.2,
@@ -1137,7 +1138,7 @@ function beginCloneWarp(world: World, dummy: Dummy): void {
   // 落地尖刺提示瞬移落点
   spawnHazard(world, {
     x: target - 0.7,
-    y: 1,
+    y: WORLD.groundTop,
     w: 1.4,
     h: 0.5,
     windup: CLONE_WINDUP,
@@ -1177,7 +1178,7 @@ function beginVoidHole(world: World, dummy: Dummy): void {
   const px = world.player.x;
   spawnHazard(world, {
     x: px - 1.25,
-    y: 1,
+    y: WORLD.groundTop,
     w: 2.5,
     h: 0.85,
     windup: VOID_HOLE_WINDUP,
@@ -1190,7 +1191,7 @@ function beginVoidHole(world: World, dummy: Dummy): void {
   if (dummy.phase >= 2) {
     spawnHazard(world, {
       x: dummy.x - 1.0,
-      y: 1,
+      y: WORLD.groundTop,
       w: 2.0,
       h: 0.7,
       windup: VOID_HOLE_WINDUP + 0.15,
@@ -1222,7 +1223,7 @@ function beginRoyalSlash(world: World, dummy: Dummy): void {
     const x = dummy.x + dir * (1.2 + i * 1.15) - 0.55;
     spawnHazard(world, {
       x,
-      y: 1,
+      y: WORLD.groundTop,
       w: 1.15,
       h: 0.45,
       windup: SLASH_WINDUP,
@@ -1259,7 +1260,7 @@ function beginEndingDecree(world: World, dummy: Dummy): void {
     }
     spawnHazard(world, {
       x,
-      y: 1,
+      y: WORLD.groundTop,
       w: step * 0.92,
       h: 0.55,
       windup: DECREE_WINDUP,

@@ -1,23 +1,31 @@
 import * as THREE from 'three';
-import { CAMERA, DAY_NIGHT, LIGHTING, PLAYER, attackDurationOf } from '../game/config';
+import {
+  CAMERA,
+  DAY_NIGHT,
+  LIGHTING,
+  PLAYER,
+  WORLD,
+  SCENE_Z,
+  alignLegacyY,
+  attackDurationOf,
+  isMainGround,
+} from '../game/config';
 import type { PlayerClassId } from '../game/data/classes';
+import { ENEMY_DEFS, type EnemyDefId } from '../game/data/enemy-defs';
 import { ITEM_DEFS } from '../game/data/item-defs';
 import { DUST_LIFE, LEVEL_POPUP_LIFE, POPUP_LIFE } from '../game/systems/combat';
 import { LOOT_FLY_LIFE } from '../game/systems/loot';
 import type { Dummy, GroundLoot, LootFly, Rect, World } from '../game/types';
 import {
   createPlayerRig,
-  createRotwolfRig,
-  createTreantRig,
   flashWarrior,
-  poseRotwolf,
-  poseTreant,
   poseWarrior,
   applyVanishStealth,
   applyNgPlusCloak,
   type BeastRig,
   type WarriorRig,
 } from './actor-rig';
+import { createEnemyRig, enemyFootOffset, enemyHeadOffset, poseEnemy } from './enemy-rigs';
 import {
   createDamagePopupMesh,
   createDustMesh,
@@ -207,8 +215,8 @@ export class GameRenderer {
     this.scene.fog = new THREE.Fog(this.fogColor, 22, 72);
 
     this.camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 100);
-    this.camera.position.copy(this.camPos);
-    this.camera.lookAt(2, CAMERA.lookY, 0);
+    this.camera.position.set(this.camPos.x, this.camPos.y + CAMERA.eyeY, CAMERA.z);
+    this.camera.lookAt(this.camPos.x, this.camPos.y, 0);
 
     this.addLights();
     this.scene.add(this.weather.group);
@@ -413,7 +421,7 @@ export class GameRenderer {
     const x = p.prevX + (p.x - p.prevX) * alpha;
     const y = p.prevY + (p.y - p.prevY) * alpha;
 
-    this.playerMesh.position.set(x, y + 0.68, 0);
+    this.playerMesh.position.set(x, y + 0.68, SCENE_Z.actor);
     this.playerMesh.scale.set(p.facing, 1, 1);
     if (this.playerLight) {
       this.playerLight.position.set(x + p.facing * 0.35, y + 1.6, 7.2);
@@ -500,8 +508,10 @@ export class GameRenderer {
     const shake = world.shake;
     const ox = shake > 0 ? Math.sin(this.clock * 78) * shake * 0.16 : 0;
     const oy = shake > 0 ? Math.cos(this.clock * 92) * shake * 0.11 : 0;
-    this.camera.position.set(this.camPos.x + ox, this.camPos.y + oy, CAMERA.z);
-    this.camera.lookAt(this.camPos.x + ox, this.camPos.y + oy, 0);
+    const lookX = this.camPos.x + ox;
+    const lookY = this.camPos.y + oy;
+    this.camera.position.set(lookX, lookY + CAMERA.eyeY, CAMERA.z);
+    this.camera.lookAt(lookX, lookY, 0);
     if (this.frontLight) {
       this.frontLight.position.set(this.camPos.x, this.camPos.y + 2.4, 14);
       this.frontLight.target.position.set(this.camPos.x, this.camPos.y - 1.6, 0);
@@ -528,6 +538,12 @@ export class GameRenderer {
 
     for (const dummy of world.dummies) {
       let view = this.dummyViews.get(dummy.id);
+      if (view && view.kind !== dummy.kind) {
+        view.root.parent?.remove(view.root);
+        this.scene.remove(view.hpRoot);
+        this.dummyViews.delete(dummy.id);
+        view = undefined;
+      }
       if (!view) {
         view = this.createDummy(dummy, this.requireTex());
         (this.zoneGroup ?? this.scene).add(view.root);
@@ -535,21 +551,22 @@ export class GameRenderer {
       }
       const alive = dummy.hp > 0;
       view.root.visible = alive || dummy.deadT < 0.55;
-      const foot = (dummy.kind === 'treant' ? 0.7 : 0.5) * dummy.visualScale;
+      const foot = enemyFootOffset(dummy.kind) * dummy.visualScale;
       const bossScale = dummy.visualScale;
-      view.root.position.set(dummy.x, dummy.y + foot, 0);
-      if (view.kind === 'treant') {
-        poseTreant(view.rig, dummy, this.clock);
-      } else {
-        poseRotwolf(view.rig, dummy, this.clock);
-      }
-      view.spark.visible = dummy.flash > 0 || dummy.state === 'fuse' || dummy.castId === 'charge';
+      view.root.position.set(dummy.x, dummy.y + foot, SCENE_Z.actor);
+      poseEnemy(view.rig, dummy, this.clock);
+      view.spark.visible =
+        dummy.flash > 0 ||
+        dummy.state === 'fuse' ||
+        dummy.castId === 'charge' ||
+        dummy.castId === 'leap' ||
+        dummy.castId === 'slam';
       const scale = (alive ? 1 : Math.max(0.15, 1 - dummy.deadT * 1.6)) * bossScale;
       view.root.scale.set(dummy.facing * scale, scale, scale);
       view.hpRoot.visible = alive;
       if (alive) {
-        const head = (dummy.kind === 'treant' ? 2.35 : 1.85) * bossScale;
-        view.hpRoot.position.set(dummy.x, dummy.y + head, 0.35);
+        const head = enemyHeadOffset(dummy.kind) * bossScale;
+        view.hpRoot.position.set(dummy.x, dummy.y + head, SCENE_Z.actor + 0.35);
         updateHpBar(view.hpFill, dummy.hp / dummy.maxHp);
       }
     }
@@ -979,7 +996,7 @@ export class GameRenderer {
   private addTerrain(platforms: Rect[], rivers: Rect[], tex: P0Textures): void {
     const root = this.zoneRoot();
     const grounds = platforms
-      .filter((plat) => plat.y <= 0 && plat.h >= 0.8 && !isZoneEndWall(plat))
+      .filter((plat) => isMainGround(plat.y, plat.h) && !isZoneEndWall(plat))
       .slice()
       .sort((a, b) => a.x - b.x);
     for (const ground of grounds) {
@@ -1050,6 +1067,7 @@ export class GameRenderer {
     const root = this.zoneRoot();
     const tint = this.sceneTheme.groundTint;
     const cliffH = 20;
+    const surfaceY = WORLD.groundTop;
     const cx = x + w / 2;
     const dirt = new THREE.MeshStandardMaterial({
       map: cloneRepeat(tex.ground, Math.max(2, w / 4), 6),
@@ -1062,11 +1080,11 @@ export class GameRenderer {
     frontDirt.emissive = new THREE.Color(PALETTE.moss);
     frontDirt.emissiveIntensity = 0.12;
     const front = new THREE.Mesh(new THREE.BoxGeometry(w, cliffH, 4.2), frontDirt);
-    front.position.set(cx, 1 - cliffH / 2, 3.5);
+    front.position.set(cx, surfaceY - cliffH / 2, 3.5);
     root.add(front);
 
     const back = new THREE.Mesh(new THREE.BoxGeometry(w, cliffH, 3.2), dirt);
-    back.position.set(cx, 1 - cliffH / 2, -2.6);
+    back.position.set(cx, surfaceY - cliffH / 2, -2.6);
     back.receiveShadow = true;
     root.add(back);
 
@@ -1081,7 +1099,7 @@ export class GameRenderer {
         emissiveIntensity: 0.04,
       }),
     );
-    top.position.set(cx, 1.04, 0);
+    top.position.set(cx, surfaceY + 0.04, 0);
     top.receiveShadow = true;
     root.add(top);
   }
@@ -1132,7 +1150,7 @@ export class GameRenderer {
     this.campProps.push(challengeGate);
     this.campfire = createCampfire(tex);
     root.add(this.campfire.group);
-    for (const point of [{ x: 2.35 }, { x: 35.4 }]) {
+    for (const point of ZONES.a01.banners) {
       const banner = createBanner(tex, point.x);
       root.add(banner.group);
       this.banners.push(banner);
@@ -1148,49 +1166,43 @@ export class GameRenderer {
   private addKitProps(tex: P0Textures, world: World): void {
     const root = this.zoneRoot();
     const zone = ZONES[world.zoneId];
-    const torches =
-      world.zoneId === 'a01'
-        ? [3.5, 10.2, 18.4, 28.6, 41.2]
-        : world.zoneId === 'a03'
-          ? [3.4, 16.2, 29.0, 41.6]
-          : world.zoneId === 'a04'
-            ? [3.2, 15.4, 28.2, 40.8]
-            : world.zoneId === 'a05'
-              ? [3.3, 15.0, 27.6, 41.2]
-              : world.zoneId === 'a06'
-                ? [3.2, 15.2, 28.0, 41.0]
-                : world.zoneId === 'a07'
-                  ? [3.3, 15.0, 27.8, 41.2]
-                  : world.zoneId === 'a08'
-                    ? [3.2, 14.8, 27.6, 41.0]
-                    : world.zoneId === 'a09'
-                      ? [3.3, 14.6, 27.4, 41.2]
-                      : world.zoneId === 'a10'
-                        ? [3.2, 14.5, 27.2, 41.0]
-                        : world.zoneId === 'a11'
-                          ? [3.1, 14.4, 27.0, 40.8]
-                          : world.zoneId === 'a12'
-                            ? [3.0, 14.2, 26.8, 41.2]
-                            : [3.2, 14.8, 27.2, 39.4];
+    const torches: number[] = [];
+    for (const plat of world.platforms) {
+      if (!isMainGround(plat.y, plat.h) || isZoneEndWall(plat) || plat.w < 6) {
+        continue;
+      }
+      torches.push(plat.x + Math.min(2.8, plat.w * 0.2));
+      if (plat.w > 12) {
+        torches.push(plat.x + plat.w * 0.62);
+      }
+    }
     for (const tx of torches) {
       const torch = createTorch(tex, tx);
       root.add(torch.group);
       this.campProps.push(torch);
     }
     for (const secret of zone?.secrets ?? []) {
-      const chest = createSecretChest(tex, secret.id, secret.x, secret.y);
+      const chest = createSecretChest(tex, secret.id, secret.x, alignLegacyY(secret.y));
       root.add(chest.group);
       this.secretChests.push(chest);
     }
     if (world.zoneId === 'a01') {
-      const gate = createEndGate(tex);
+      const grounds = zone?.kit.filter((piece) => piece.kind === 'ground') ?? [];
+      const last = grounds[grounds.length - 1];
+      const gateX = last ? last.x + last.w - 1.55 : 91.2;
+      const gate = createEndGate(tex, gateX);
       root.add(gate.group);
       this.campProps.push(gate);
     }
   }
 
   private createDummy(dummy: Dummy, tex: P0Textures): DummyView {
-    const rig = dummy.kind === 'treant' ? createTreantRig() : createRotwolfRig();
+    const def = ENEMY_DEFS[dummy.enemyId as EnemyDefId];
+    const rig = createEnemyRig(dummy.kind, {
+      body: def?.body ?? 0x4a5a48,
+      accent: def?.accent ?? 0x6a6a58,
+      glow: def?.glow ?? 0xb8d080,
+    });
     const spark = this.makeAdditive(tex.hitSpark, 1.1, 1.1);
     spark.visible = false;
     spark.position.z = 0.25;
@@ -1410,17 +1422,17 @@ export class GameRenderer {
       key = `npc:${npc.id}`;
       label = `F ${npc.prompt}`;
       x = npc.x;
-      y = npc.promptY;
+      y = alignLegacyY(npc.promptY);
     } else if (hub) {
       key = 'hub-portal';
       label = 'F 打开传送';
       x = hub.x;
-      y = hub.promptY;
+      y = alignLegacyY(hub.promptY);
     } else if (secret) {
       key = `secret:${secret.id}`;
       label = 'F 开启宝箱';
       x = secret.x;
-      y = secret.y + 1.35;
+      y = alignLegacyY(secret.y) + 1.35;
     } else {
       if (this.interactPrompt) {
         this.interactPrompt.visible = false;
@@ -1543,35 +1555,51 @@ export class GameRenderer {
         const isArcane = shot.visual === 'arcane';
         const isArrow = shot.visual === 'arrow' || shot.visual === 'arrow-fan';
         const isPyro = shot.visual === 'pyroblast';
-        const isIce = shot.visual === 'ice-lance';
+        const isIce = shot.visual === 'ice-lance' || shot.visual === 'ice';
+        const shotColor =
+          shot.visual === 'poison'
+            ? 0x8fd64a
+            : shot.visual === 'flame'
+              ? 0xff6a30
+              : shot.visual === 'void'
+                ? 0x8a60ff
+                : shot.visual === 'sand'
+                  ? 0xe8c878
+                  : shot.visual === 'bolt'
+                    ? 0xffe080
+                    : isPyro
+                      ? 0xff6a3d
+                      : isIce
+                        ? 0xa8e8ff
+                        : isFireball
+                          ? PALETTE.ember
+                          : isArcane
+                            ? 0x7ec8e3
+                            : isArrow
+                              ? PALETTE.gold
+                              : PALETTE.mage;
         mesh = new THREE.Mesh(
           new THREE.SphereGeometry(
             isPyro
               ? 0.3
-              : isIce
-                ? 0.14
-                : isFireball
-                  ? 0.22
-                  : isArrow
-                    ? 0.1
-                    : isArcane
-                      ? 0.16
-                      : 0.18,
+              : shot.visual === 'flame'
+                ? 0.26
+                : isIce
+                  ? 0.14
+                  : isFireball
+                    ? 0.22
+                    : isArrow
+                      ? 0.1
+                      : shot.visual === 'bolt'
+                        ? 0.12
+                        : isArcane
+                          ? 0.16
+                          : 0.18,
             8,
             8,
           ),
           new THREE.MeshBasicMaterial({
-            color: isPyro
-              ? 0xff6a3d
-              : isIce
-                ? 0xa8e8ff
-                : isFireball
-                  ? PALETTE.ember
-                  : isArcane
-                    ? 0x7ec8e3
-                    : isArrow
-                      ? PALETTE.gold
-                      : PALETTE.mage,
+            color: shotColor,
             transparent: true,
             depthTest: false,
             fog: false,
@@ -1584,7 +1612,12 @@ export class GameRenderer {
       mesh.position.set(shot.x, shot.y, 0.55);
       const pulse = 0.9 + Math.sin(this.clock * 18 + shot.id) * 0.15;
       mesh.scale.setScalar(
-        pulse * (shot.visual === 'fireball' || shot.visual === 'pyroblast' ? 1.15 : 1),
+        pulse *
+          (shot.visual === 'fireball' || shot.visual === 'pyroblast' || shot.visual === 'flame'
+            ? 1.15
+            : shot.visual === 'void' || shot.visual === 'poison'
+              ? 1.08
+              : 1),
       );
     }
     for (const [id, mesh] of this.projectileViews) {
